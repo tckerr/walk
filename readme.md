@@ -1,12 +1,12 @@
 #Contents
 
-1. [Description](#Description)
-2. [Usage](#Usage)
-3. [Documentation](#Documentation)
-  1. [Config options](#Config)
-  2. [Classes](#Classes)
-  3. [Callbacks](#Callbacks)
-4. [Examples](#Examples)
+1. [Description](#description)
+2. [Usage](#usage)
+3. [Documentation](#documentation)
+  1. [Config options](#config-options)
+  2. [Classes](#classes)
+  3. [Callbacks](#callbacks)
+4. [Examples](#examples)
 
 
 # Description
