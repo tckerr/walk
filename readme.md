@@ -6,9 +6,7 @@ Description
 - Type-specific (array/obj/value) preprocess and postprocess callback hooks that get executed during the walk
 - A key-->"class" map for object keys to avoid redundant key-specific definitions
 
-It also provides some convience functions, such as:
-
-- Flattening of nested arrays/objects into a value list
+It also provides some convenience functions, such as flattening nested arrays/objects into a value list.
 
 Usage
 ---
@@ -115,7 +113,7 @@ Here are the properties you can define, which act as filters:
 
 ####Callback Arguments:
 
-- ```key```: The key of this property as defined on it's parent. For example, if this callback is running on the ```'weight'``` property of a ```person```, the ```key``` would be ```'weight'```." Note that this will be ```undefined``` for properties in arrays.
+- ```key```: The key of this property as defined on it's parent. For example, if this callback is running on the ```'weight'``` property of a ```person```, the ```key``` would be ```'weight'```. Note that this will be ```undefined``` for properties in arrays.
 - ```value```: The value of the property. To use the above example, the value would be something like ```'183'```.
 - ```className```: The className that the property matched on in the config's ```classMap```.
 - ```owner```: The object under which the property exists.

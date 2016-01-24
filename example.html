@@ -43,6 +43,14 @@
             <td>Flatten all unique email properties into an array and print them to console.</td>
             <td><button onclick="flatten()">Do it!</button></td>
         </tr>
+        <tr>
+            <td>Get average age of all people and print it to console.</td>
+            <td><button onclick="averageAge()">Do it!</button></td>
+        </tr>
+        <tr>
+            <td>Add a random hometown to every person, then print those new properties.</td>
+            <td><button onclick="hometowns()">Do it!</button></td>
+        </tr>
     </table>
     <script type="text/javascript">
 
@@ -106,6 +114,86 @@
             var data = JSON.parse(document.getElementById('data').innerHTML);
             var flattened = walk.flatten(data, 'email', true);
             console.log(flattened);
+        }
+
+        function averageAge(){
+            var data = JSON.parse(document.getElementById('data').innerHTML);
+            var ages = [];
+            var config = {
+                log: false,
+                classMap: {
+                    "person": "person",
+                    "friends": "person"
+                },
+                callbacks:[
+                    {
+                        name: 'age counter',
+                        positions: ['postWalk'],
+                        //keys: ['friends'],
+                        classKeys: {
+                            'person': ['age']
+                        },
+                        callback: function(key, val, className, owner, arrayAssignment, arrayAssignmentKey, isRoot){
+                            console.log("Person", owner.name, "is", val, "years old.");
+                            ages.push(val);
+                        }
+                    }
+                ]
+                
+            }
+            var className = document.getElementById('label').value;
+            walk.walk(data, className, config);
+            var total = 0;
+            for (var i = 0; i < ages.length; ++i){
+                total += ages[i];
+            }
+            var avg = total/ages.length;
+            console.log("Average age of", ages.length, "people is", avg );
+        }
+
+        function hometowns(){
+            var data = JSON.parse(document.getElementById('data').innerHTML);
+            var className = document.getElementById('label').value;
+            var hometowns = [
+                'Philadelphia',
+                'New York',
+                'San Francisco',
+                'Austin',
+                'Chicago',
+                'Miami'
+            ]
+
+            // create our callback configuration
+            var walkConfig = {
+                classMap: {
+                    "person": "person",
+                    "friends": "person"
+                },
+                callbacks: [
+                    {
+                        name: 'hometown adder',
+                        positions: ['preWalk'],
+                        classNames: ['person'],
+                        containers: ['object'],
+                        callback: function(key, val, className, owner, arAsgn, arAsgnK, isRoot){
+                            var randomIndex = Math.round(Math.random() * 5);
+                            var randomHometown = hometowns[randomIndex];
+                            val['hometown'] = randomHometown;
+                        }
+                    },
+                    {
+                        name: 'hometown reader',
+                        positions: ['preWalk'],
+                        classKeys: {
+                           'person': ['hometown']
+                        },
+                        callback: function(key, val, className, owner, arAsgn, arAsgnK, isRoot){
+                            console.log("Person", owner.name, "is from", val);
+                        }
+                    }
+               ]
+            }
+            walk.walk(data, className, walkConfig);
         }
 
 
