@@ -82,7 +82,8 @@
                                               isRoot,
                                               path,
                                               previousCallbacks, 
-                                              container){
+                                              container,
+                                              parentClassName){
 
                     var kwargs = {
                         'callbacks': callbacks,
@@ -95,7 +96,8 @@
                         'arrayAssignmentKey': arrayAssignmentKey, 
                         'isRoot': isRoot,
                         'path': path,
-                        'previousCallbacks': previousCallbacks
+                        'previousCallbacks': previousCallbacks,
+                        'parentClassName':parentClassName
                     }
                     for (var i = 0; i < callbacks.length; ++i){                        
                         callbacks[i].__walk_has_run = false;
@@ -250,7 +252,7 @@
                     // match and run callbacks
                     var matchedPreCallbacks = self.matchedCallbacks(container, className, key, 'preWalk', parentClassName, isRoot);
                     self.execCallbacks(matchedPreCallbacks, key, val, className, owner, arrayAssignment, 
-                                       arrayAssignmentKey, isRoot, path, [], container);
+                                       arrayAssignmentKey, isRoot, path, [], container, parentClassName);
                     
                     // prettiness
                     var printKey = key ?  key + " -->" : "";
@@ -284,7 +286,8 @@
                     // match and run post-traverse callbacks
                     var matchedPostCallbacks = self.matchedCallbacks(container, className, key, 'postWalk', parentClassName, isRoot);
                     self.execCallbacks(matchedPostCallbacks, key, val, className, owner, arrayAssignment, 
-                                       arrayAssignmentKey, isRoot, path, matchedPreCallbacks, container);
+                                       arrayAssignmentKey, isRoot, path, matchedPreCallbacks, container,
+                                       parentClassName);
 
                 }
 
