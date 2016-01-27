@@ -300,8 +300,10 @@
                         className, // className
                         false, //isRoot
                         path + Walk.__runtime.config.pathFormat(i, true), // path
-                        uuid,
-                        true); // uuid
+                        undefined, //uuid parent
+                        true, //process children
+                        true, // forced
+                        node._meta.uuid); // uuid
                 }
 
                 if (container == 'array' || container == 'object'){
