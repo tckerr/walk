@@ -15,6 +15,7 @@
 - Recursive decension into nested objects
 - Type-specific (array/obj/value) preprocess and postprocess callback hooks that get executed during the walk
 - A key-->class map for properties to avoid redundant key-specific definitions
+- Node parent/child/sibling accessors
 
 It also provides some convenience functions, such as deepy copying and flattening nested arrays/objects into a value list.
 
@@ -25,7 +26,7 @@ Download and include the library:
 <script src="/path/to/walk.js"></script>
 ```
 
-You will then be able to access the library through the ```walk``` object. 
+You will then be able to access the library through the ```Walk``` object. 
 
 Traverse an object with the following syntax:
 
@@ -40,7 +41,7 @@ var walkConfig = {
     log: true
 }
 
-walk.walk(exampleObject, 'example', walkConfig);
+Walk.walk(exampleObject, 'example', walkConfig);
 ```
 
 Where the arguments are:
@@ -65,25 +66,26 @@ See the documentation for more details!
 - ```monitorPerformance``` *(true|false)*: Set this to true to print a performance report to console after the walk is complete.
 - ```pathFormat```: a function that returns a path segment from a key (object key string or array index). The first argument is the key and the second argument is a boolean that is ```true``` when the key is an array index, ```false``` when it is a object key.
 - ```callbacks```: an array of callback objects. See the Callback section for more information.
+- ```traversalMode``` (*temporary unavailable*): the mode for traversing the tree. To be implemented.
 
-The configuration defaults to the following. Note that you can edit this by overwriting ```walk.configDefaults```:
+The configuration defaults to the following. Note that you can edit this by overwriting ```Walk.configDefaults```:
 
 ```
 configDefaults: {
     log: false,
-    logger: console,
     classMap: {},
+    logger: console,
+    traversalMode: 'integrated',
     enforceRootClass: false,
     strictClasses: false,
     rootObjectCallbacks: true,
     runCallbacks: true,
-    monitorPerformance: false,
+    monitorPerformance: true,
     pathFormat: function(key, isArr){
         return isArr ? '['+key+']' : '["'+key+'"]';
     },
-    callbacks: [                    
-    ]
-}
+    callbacks: []
+},
 ```
 
 ### Classes
@@ -114,7 +116,7 @@ We want to be able to execute custom functionality on certain properties within 
     classKeys:{
         'person': ['friends'] //redundant, but just an example
     },
-    callback: function(kwargs){
+    callback: function(node){
         // do things here
     }
 }
@@ -126,21 +128,19 @@ Here are the properties you can define, which act as filters:
 - ```classNames```: an array of classNames to run on. The callback will check the class name of the property as it has been resolved in the config's ```classMap```. If unspecifed, the callback will run on any class.
 - ```keys```: an array of keys to run on. The callback will check the key of the property against this list. If unspecifed, the callback will run on any key.
 - ```classKeys```: an object of "className": [keyArray] pairs. The callback will check the key of the property against this list, but will only match on keys from the given class. If unspecified, no keys will be filtered out (assuming the ```keys``` property is unset, otherwise it'll default to that.) Also note that if the ```classNames``` array is defined, any classKeys for classes not in that array will never be processed.
-- ```positions```: an array of positions in the traversal to run on -- think of this as when it should execute. Options are ```'preWalk'``` (before any list/object is traversed), and ```'postWalk'``` (after any list/object is traversed). For properties of container-type ```'value'```, these two run in immediate succession. If unspecifed, the callback will run ```'postWalk'``` (this can be overidden in ```walk.defaultCallbackPosition```).
+- ```positions```: an array of positions in the traversal to run on -- think of this as when it should execute. Options are ```'preWalk'``` (before any list/object is traversed), and ```'postWalk'``` (after any list/object is traversed). For properties of container-type ```'value'```, these two run in immediate succession. If unspecifed, the callback will run ```'postWalk'``` (this can be overidden in ```Walk.defaultCallbackPosition```).
 - ```callback```: the actual function to run. See below for the arguments (associated values we'll have access to at the time the callback runs.)
 
-**Callback kwargs**: The callback will be passed a single argument, which is an object with the following properties:
+**Node: the callback argument**: The callback will be passed a single argument, which is an object (node) with the following properties:
 
 - ```key```: The key of this property as defined on it's parent. For example, if this callback is running on the ```'weight'``` property of a ```person```, the ```key``` would be ```'weight'```. Note that this will be ```undefined``` for properties in arrays.
 - ```value```: The value of the property. To use the above example, the value would be something like ```'183'```.
 - ```className```: The className that the property matched on in the config's ```classMap```.
-- ```owner```: The object under which the property exists.
+- ```parent``` (function): The node under which the property exists. ```node.parent()``` is another instance of node, and will have all the same properties.
 - ```container```: The type of container the property is.
-- ```arrayAssignment```: The array in which the property exists. This will be ```undefined``` for properties that do not belong to an array.
-- ```arrayAssignmentKey```: The key to the array in which the property exists on the parent. This will be ```undefined``` for properties that do not belong to an array and ```undefined``` for nested arrays.
 - ```isRoot```: A boolean that is set to ```true``` if the property is a root object, otherwise ```false```.
-- ```callbacks```: An array of all the callback functions in the stack. Callback stacks are grouped by property and position. The current function *will* be included. A property is made available on each function via ```callbacks[index].__walk_has_run``` which will be true if the function has run in the current stack. This property is only available during the callback stack execution, and is deleted immediately afterwards.
-- ```previousCallbacks```: An array of all callback functions that matched in previous positions. All of the functions in this list will have run on the property at the time of access.
+- ```callbacks```: An array of all the callback functions in the stack. Callback stacks are grouped by property and position. The current function *will* be included. A property is made available on each function via ```callbacks[index].__walk$_has_run``` which will be true if the function has run in the current stack. This property is only available during the callback stack execution, and is deleted immediately afterwards.
+- ```executedCallbacks```: An array of all callback functions that have already run on this property.
 - ```path``` The path to the value. For example, if the variable you're walking is named ```myObject```, the path will look something like ```["friends"][10]["friends"][2]["name"]```, such that calling ```myObject["friends"][10]["friends"][2]["name"]``` will return the ```val```. You can set the path format in the config (see ```pathFormat```).
 
 The root has been omitted since it is a primary argument to the walk function, so it is assumed the caller has access to it at runtime. 
@@ -149,29 +149,29 @@ The root has been omitted since it is a primary argument to the walk function, s
 
 Walk.js provides some convenience functions which are really just implementations of the library. These demonstrate some of the power of the library. Let's take a look at two examples:
 
-**1. Flattening values via ```walk.flatten()```:**
+**1. Flattening values via ```Walk.flatten()```:**
 *This function traverses an object tree and adds any values that match a specified key to an array. Return an array of optionally unique values.*
 
 ```
 flatten: function( object, key ){
     //return array of values that match the key
     var arr = [];
-    walk.walk(object, undefined, {
+    Walk.walk(object, undefined, {
         callbacks: [
             {
                 keys: [key],
-                callback: function(kwargs){
-                    arr.push(kwargs['val']);
+                callback: function(node){
+                    arr.push(node.val);
                 }
             }
         ]
     });
-    //walk.unique just returns an array of unique items
-    return unique ? walk.unique(arr) : arr;
+    //Walk.unique just returns an array of unique items
+    return unique ? Walk.unique(arr) : arr;
 }
 ```
 
-**2. Deep copying values via ```walk.deepCopy()```:**
+**2. Deep copying values via ```Walk.deepCopy()```:**
 *This function makes a deep copy of an object, preserving the original.*
 
 ```
@@ -192,7 +192,7 @@ deepCopy: function(obj){
         nobj[block.shift()] = val;
     }
 
-    walk.walk(obj, undefined, {
+    Walk.walk(obj, undefined, {
         pathFormat: function(key, isArr){
             return uuid+key;
         },
@@ -205,13 +205,13 @@ deepCopy: function(obj){
                 callback: function(kwargs){
                     switch(kwargs['container']){                                    
                         case 'array':
-                            updateObject(newObj, [], kwargs['path']);
+                            updateObject(newObj, [], node.path);
                             break;
                         case 'object':
-                            updateObject(newObj, {}, kwargs['path']);
+                            updateObject(newObj, {}, node.path);
                             break;
                         case 'value':
-                            updateObject(newObj, kwargs['val'], kwargs['path']);
+                            updateObject(newObj, node.val, node.path);
                             break;
                     }
                 }

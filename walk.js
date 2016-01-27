@@ -1,11 +1,20 @@
 (function(window){
     'use strict';
-    function define_walk(){
-        var walk;
-        walk = {
+    function defineWalk(){
+        var Walk;
+        Walk = {
             exceptions:{
                 classNotFound: function(key){
-                    throw "Exception thrown during object traversal. No associated class found for key: '" + key + "'.";
+                    Walk.__deconstruct();
+                    throw "fatal exception: No associated class found for key: '" + key + "'.";
+                },
+                traversalFault: function(type){
+                    Walk.__deconstruct();
+                    throw "fatal exception: This function is not available when running in " + type + " mode! See the documentation for details."
+                },
+                notImplemented: function(fn){
+                    Walk.__deconstruct();
+                    throw "fatal exception: " + fn + " not implemented yet but will be soon!"
                 }
             },
             defaultCallbackPosition: 'postWalk',
@@ -13,301 +22,342 @@
                 log: false,
                 classMap: {},
                 logger: console,
+                traversalMode: 'integrated',
                 enforceRootClass: false,
                 strictClasses: false,
                 rootObjectCallbacks: true,
                 runCallbacks: true,
-                monitorPerformance: false,
+                monitorPerformance: true,
                 pathFormat: function(key, isArr){
                     return isArr ? '['+key+']' : '["'+key+'"]';
                 },
                 callbacks: [                    
                 ]
             },
+            __data:{
+                reports: [],
+            },
+            __partial: function (fn) {
+                var args = Array.prototype.slice.call(arguments, 1);
+                return function () {
+                    var allArgs = args.concat(Array.prototype.slice.call(arguments));
+                    return fn.apply(this, allArgs);
+                };
+            },
+            __nodeFunctions:{
+                parent: function(parentUuid){      
+                    return Walk.__runtime.uuidMap[parentUuid];
+                },
+                siblings: function(parentUuid){
+                    if (Walk.__runtime.config.traversalMode === 'integrated'){
+                        Walk.exceptions.traversalFault('integrated');
+                    }
+                    return Walk.__runtime.uuidMap[parentUuid];
+                },
+            },
+            __set_uuid: function(parentUuid, key, val, className, parent, isRoot, path, container){ 
+                var uuid = ++Walk.__runtime.uuid;
+                var map = {
+                    _meta: {
+                        uuid: uuid,
+                        parentUuid: parentUuid
+                    },
+                    key: key, 
+                    val: val,
+                    type: typeof(val),  
+                    className: className,
+                    isRoot: isRoot, 
+                    path: path,  
+                    container: container, 
+                    executedCallbacks: [],
+                    parent: Walk.__partial(Walk.__nodeFunctions.parent, parentUuid)
+                }      
+                Walk.__runtime.uuidMap[uuid] = map;
+                return uuid;
+            },
+            __matchedCallbacks: function(uuid, position){
+
+                var data = Walk.__runtime.uuidMap[uuid];
+                var runCallbacks = Walk.__runtime.config.runCallbacks;
+                var matched = [];                    
+                if (runCallbacks){        
+                    if (data.isRoot && !Walk.__runtime.config.rootObjectCallbacks){
+                        return matched;
+                    }                
+                    var callbacks = Walk.__runtime.config.callbacks;
+                    for (var i = 0; i < callbacks.length; ++i) {                            
+                        var callback = callbacks[i];
+
+                        // exit if positions are defined and not in list
+                        if (typeof(callback.positions) !== 'undefined') {
+                            if (callback.positions.indexOf(position) === -1 ){
+                                continue;
+                            }
+                        // if undefined, exit if not the default
+                        } else {
+                            if (position !== Walk.defaultCallbackPosition ){
+                                continue;
+                            }
+                        }
+
+                        // exit if containers are defined and not in list
+                        if (typeof(callback.containers) !== 'undefined'
+                            && callback.containers.indexOf(data.container) === -1 ){                                
+                            continue;
+                        }
+
+                        // exit if classNames are defined and not in list
+                        if (typeof(callback.classNames) !== 'undefined'
+                            && callback.classNames.indexOf(data.className) === -1 ){                                    
+                            continue;
+                        }
+
+                        // exit if keys are defined and not in list
+                        var keysDef = typeof(callback.keys) !== 'undefined';
+                        var classKeysDef = typeof(callback.classKeys) !== 'undefined';
+                        if (keysDef || classKeysDef){
+                            if (typeof(data.key) === 'undefined'){
+                                continue;
+                            }
+                            if (!keysDef){
+                                if (    typeof(data.parent().className) === 'undefined'
+                                    ||  typeof(callback.classKeys[data.parent().className]) === 'undefined'
+                                    || callback.classKeys[data.parent().className].indexOf(data.key) === -1){
+                                    continue;
+                                }
+                            } else if (callback.keys.indexOf(data.key) === -1) {
+                                continue;
+                            }
+                        }
+                        matched.push(callback);
+                    }
+                }
+                return matched;
+            },
+            __execCallbacks: function(callbacks, uuid){
+                for (var i = 0; i < callbacks.length; ++i){                        
+                    callbacks[i].__walk$_has_run = false; // only in case users want this, not used internally
+                }    
+                for (var i = 0; i < callbacks.length; ++i){
+                    if (Walk.__runtime.config.monitorPerformance){
+                        var cbStackStart = new Date();
+                        callbacks[i].callback(Walk.__runtime.uuidMap[uuid]);
+                        Walk.__data.reports[Walk.__runtime.reportId].callbackProcessingTime += new Date() - cbStackStart;
+                    } else {
+                        callbacks[i].callback(Walk.__runtime.uuidMap[uuid]);
+                    }                        
+                    callbacks[i].__walk$_has_run = true;
+                    Walk.__runtime.uuidMap[uuid].executedCallbacks.push(callbacks[i]);
+                }
+                for (var i = 0; i < callbacks.length; ++i){
+                    delete callbacks[i].__walk$_has_run;
+                }
+            },
+            __log: function(args, type){
+                if (Walk.__runtime.config['log'] != true){
+                    return;
+                }
+                if (typeof(type) === 'undefined'){
+                    type = 1;
+                }    
+                if (type === 1){
+                    Walk.__runtime.config.logger.log.apply(console, args);
+                }                
+                else if (type === 2){
+                    if (typeof(console.group) !== 'undefined'){
+                        Walk.__runtime.config.logger.group.apply(console, args);
+                    }
+                } else if (type === 3){
+                    if (typeof(console.groupEnd) !== 'undefined'){
+                        Walk.__runtime.config.logger.groupEnd.apply(console, args);
+                    }
+                } 
+            },
+            // does a traversal to build the map AND runs callbacks (inline, so only parent is accessible)
+            __integratedTraverse: function(inKey, // key of prop on its parent (note this will be the array's key if its an array
+                                           inVal, // value of prop
+                                           className, // set on arrays since we now null keys
+                                           isRoot,
+                                           path,
+                                           parentUuid){
+
+                // prevent assignment messiness
+                var key = inKey;
+                var val = inVal;
+                var container;
+
+                // default to NOT root
+                if (typeof(isRoot) == 'undefined'){
+                    isRoot = false;
+                }
+
+                // default path to empty string
+                if (typeof(path) == 'undefined'){
+                    path = '';
+                }
+
+                // check container type
+                // check to make sure the value is set before checking constructor
+                var canCheckConstructor = !(typeof(val) === 'undefined' || val == null);
+                if (canCheckConstructor && val.constructor == Array){
+                    container = 'array';
+                } else if (canCheckConstructor && val.constructor == Object){
+                    container = 'object';
+                } else {
+                    container = 'value'; // TODO: better type evaluation (dates, etc)
+                }
+
+                // set class by looking up my key in the classMap
+                if (typeof(className) === 'undefined'){
+                    var classMap = Walk.__runtime.config.classMap;
+                    var noClassDefinition = !classMap || !Walk.__runtime.config.classMap[key];
+                    var notRootExempt = !isRoot || (isRoot && Walk.__runtime.config.enforceRootClass);                    
+                    if (Walk.__runtime.config.strictClasses && noClassDefinition && notRootExempt && container == 'object'){
+                        // throw exception if necessary definitions aren't set
+                        walk.exceptions.classNotFound(key);
+                    } else if (!noClassDefinition){
+                        //class definition exists, so set class
+                        className = Walk.__runtime.config.classMap[key];
+                    } 
+                } else {
+                    // class pre-set, so inheret (this should only happen for items in arrays)
+                }
+
+                if (Walk.__runtime.config.monitorPerformance){
+                    Walk.__data.reports[Walk.__runtime.reportId].processed[container] += 1;
+                    if (typeof(className) !== 'undefined' && container != 'array') {
+                        if (typeof(Walk.__data.reports[Walk.__runtime.reportId].processed.classInstances[className]) === 'undefined'){
+                            Walk.__data.reports[Walk.__runtime.reportId].processed.classInstances[className] = 1;
+                        } else {
+                            Walk.__data.reports[Walk.__runtime.reportId].processed.classInstances[className] += 1;
+                        }
+                    }
+                }
+
+                // set UUIDs so we can link to parent
+                var uuid = Walk.__set_uuid(parentUuid, key, val, className, parent,  isRoot, path, container)
+
+                // match and run callbacks
+                var matchedPreCallbacks = Walk.__matchedCallbacks(uuid, 'preWalk');
+                Walk.__execCallbacks(matchedPreCallbacks, uuid);
+                
+                // prettiness
+                var printKey = key ? key + " -->" : "";
+
+                // if the property is a list
+                if (container == 'array'){
+                    // traverse the array
+                    Walk.__log([printKey, "Array  ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);
+                    for ( var i = 0; i < val.length; ++i ){                        
+                        Walk.__integratedTraverse(undefined,  //key
+                                                  val[i], // val
+                                                  className, // className
+                                                  false,  //isRoot
+                                                  path+Walk.__runtime.config.pathFormat(i, true), // path
+                                                  uuid); // uuid
+                    }
+                    Walk.__log(undefined, 3);
+                } 
+
+                // if the propery is a object
+                else if (container == 'object') {
+                    // traverse the object                    
+                    Walk.__log([printKey, "Object ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);   
+                    for (var xkey in val) {if (val.hasOwnProperty(xkey)) {
+                        Walk.__integratedTraverse(xkey,  //key
+                                                  val[xkey], // val
+                                                  undefined, // className
+                                                  false, //isRoot
+                                                  path+Walk.__runtime.config.pathFormat(xkey, false), // path
+                                                  uuid); // uuid
+                    }}                        
+                    Walk.__log(undefined, 3);
+                } 
+
+                // otherwise, eval the prop
+                else {
+                    Walk.__log([printKey, val, " ( Class:", className, ")", "Path:", path, "Root:", isRoot], 1);         
+                }
+
+                // match and run post-traverse callbacks
+                var matchedPostCallbacks = Walk.__matchedCallbacks(uuid, 'postWalk');
+                Walk.__execCallbacks(matchedPostCallbacks, uuid);
+
+            },
+            __initializeWalk: function(config){                           
+                Walk.__runtime = {};
+                Walk.__runtime.config = {};
+                Walk.__runtime.uuidMap = {};
+                Walk.__runtime.uuid = 0;
+                Object.assign(Walk.__runtime.config, Walk.configDefaults); 
+                Object.assign(Walk.__runtime.config, config);
+                if (Walk.__runtime.config.traversalMode !== 'integrated'){
+                    Walk.exceptions.notImplemented("Traversal modes other than 'integrated' are");
+                }   
+
+            },
+            __initializeReport: function(){
+                var id = Walk.__data.reports.length;
+                Walk.__data.reports.push({});
+                Walk.__data.reports[id].id = id;
+                Walk.__data.reports[id].startTime = new Date();
+                Walk.__data.reports[id].callbackProcessingTime = 0;
+                Walk.__data.reports[id].processed = {};
+                Walk.__data.reports[id].processed.array = 0;
+                Walk.__data.reports[id].processed.object = 0;
+                Walk.__data.reports[id].processed.value = 0;
+                Walk.__data.reports[id].processed.classInstances = {};
+                return id;
+            },
+            __deconstructReport: function(id){
+                if (!Walk.__data.reports[id]){
+                    return;
+                }
+                Walk.__data.reports[id].endTime = new Date();
+                Walk.__data.reports[id].executionTime = Walk.__data.reports[id].endTime - Walk.__data.reports[id].startTime;                
+            },
+            __deconstruct: function(){
+                if (Walk.__runtime.config.monitorPerformance && Walk.__data.reports[Walk.__runtime.reportId]){
+                    Walk.__deconstructReport(Walk.__runtime.reportId);
+                    Walk.__runtime.config.logger.log("Finished execution. Performance report below.")
+                    Walk.__runtime.config.logger.log( Walk.__data.reports[Walk.__runtime.reportId]);
+                }
+                delete Walk.__runtime;
+            },
             // execute traversal of object using config from above
             walk: function(obj, className, config){
-                var self = this;
-                self.config = self.configDefaults;   
-                Object.assign(self.config, config);
+                Walk.__initializeWalk(config);
 
-                if (self.config.monitorPerformance){
-                    self.__walk_performanceReport = {};
-                    self.__walk_performanceReport.startTime = new Date();
-                    self.__walk_performanceReport.callbackProcessingTime = 0;
-                    self.__walk_performanceReport.processed = {};
-                    self.__walk_performanceReport.processed.array = 0;
-                    self.__walk_performanceReport.processed.object = 0;
-                    self.__walk_performanceReport.processed.value = 0;
-                    self.__walk_performanceReport.processed.classInstances = {};
+                if (Walk.__runtime.config.monitorPerformance){
+                    var reportId = Walk.__initializeReport();
+                    Walk.__runtime.reportId = reportId;
                 }
 
-                self.execute = function(){
-                    self.traverse(undefined, obj, undefined, undefined, undefined, className, undefined, true);
-                    if (self.config.monitorPerformance){
-                        self.__walk_performanceReport.endTime = new Date();
-                        self.__walk_performanceReport.executionTime = self.__walk_performanceReport.endTime - self.__walk_performanceReport.startTime;
-                        self.config.logger.log("Finished execution. Performance report below.")
-                        self.config.logger.log(self.__walk_performanceReport);
-                    }
-                }
-
-                self.log = function(args, type){
-                    if (self.config['log'] != true){
-                        return;
-                    }
-                    if (typeof(type) === 'undefined'){
-                        type = 1;
-                    }    
-                    if (type === 1){
-                        self.config.logger.log.apply(console, args);
-                    }                
-                    else if (type === 2){
-                        if (typeof(console.group) !== 'undefined'){
-                            self.config.logger.group.apply(console, args);
-                        }
-                    } else if (type === 3){
-                        if (typeof(console.groupEnd) !== 'undefined'){
-                            self.config.logger.groupEnd.apply(console, args);
-                        }
-                    } 
-                }
-
-                self.execCallbacks = function(callbacks, 
-                                              key, 
-                                              val, 
-                                              className, 
-                                              owner, 
-                                              arrayAssignment, 
-                                              arrayAssignmentKey, 
-                                              isRoot,
-                                              path,
-                                              previousCallbacks, 
-                                              container,
-                                              parentClassName){
-
-                    var kwargs = {
-                        'callbacks': callbacks,
-                        'key': key,
-                        'val': val,
-                        'container': container,
-                        'className': className,
-                        'owner': owner,
-                        'arrayAssignment': arrayAssignment, 
-                        'arrayAssignmentKey': arrayAssignmentKey, 
-                        'isRoot': isRoot,
-                        'path': path,
-                        'previousCallbacks': previousCallbacks,
-                        'parentClassName':parentClassName
-                    }
-                    for (var i = 0; i < callbacks.length; ++i){                        
-                        callbacks[i].__walk_has_run = false;
-                    }    
-                    for (var i = 0; i < callbacks.length; ++i){
-                        if (self.config.monitorPerformance){
-                            var cbStackStart = new Date();
-                            callbacks[i].callback(kwargs);
-                            self.__walk_performanceReport.callbackProcessingTime += new Date() - cbStackStart;
-                        } else {
-                            callbacks[i].callback(kwargs);
-                        }                        
-                        callbacks[i].__walk_has_run = true;
-                    }
-                    for (var i = 0; i < callbacks.length; ++i){
-                        delete callbacks[i].__walk_has_run;
-                    }
-                }
-
-                self.matchedCallbacks = function(containerType, // obj, array, value
-                                                 className,
-                                                 key,
-                                                 position, // pre traverse, post traverse, meaningless for value ones
-                                                 parentClassName,
-                                                 isRoot
-                                                 ){
-
-                    var runCallbacks = self.config.runCallbacks;
-                    var matched = [];                    
-                    if (runCallbacks){        
-                        if (isRoot && !self.config.rootObjectCallbacks){
-                            return matched;
-                        }                
-                        var callbacks = self.config.callbacks;
-                        for (var i = 0; i < callbacks.length; ++i) {                            
-                            var callback = callbacks[i];
-
-                            // exit if positions are defined and not in list
-                            if (typeof(callback.positions) !== 'undefined') {
-                                if (callback.positions.indexOf(position) === -1 ){
-                                    continue;
-                                }
-                            // if undefined, exit if not the default
-                            } else {
-                                if (position !== walk.defaultCallbackPosition ){
-                                    continue;
-                                }
-                            }
-
-                            // exit if containers are defined and not in list
-                            if (typeof(callback.containers) !== 'undefined'
-                                && callback.containers.indexOf(containerType) === -1 ){                                
-                                continue;
-                            }
-
-                            // exit if classNames are defined and not in list
-                            if (typeof(callback.classNames) !== 'undefined'
-                                && callback.classNames.indexOf(className) === -1 ){                                    
-                                continue;
-                            }
-
-                            // exit if keys are defined and not in list
-                            var keysDef = typeof(callback.keys) !== 'undefined';
-                            var classKeysDef = typeof(callback.classKeys) !== 'undefined';
-                            if (keysDef || classKeysDef){
-                                if (typeof(key) === 'undefined'){
-                                    continue;
-                                }
-                                if (!keysDef){
-                                    if (    typeof(parentClassName) === 'undefined'
-                                        ||  typeof(callback.classKeys[parentClassName]) === 'undefined'
-                                        || callback.classKeys[parentClassName].indexOf(key) === -1){
-                                        continue;
-                                    }
-                                } else if (callback.keys.indexOf(key) === -1) {
-                                    continue;
-                                }
-                            }
-
-                            matched.push(callback);
-                        }
-                    }
-                    return matched;
-                }
-
-                self.traverse = function(inKey, // key of prop on its parent (note this will be the array's key if its an array
-                                         inVal, // value of prop
-                                         owner, // parent
-                                         arrayAssignment, // the array property it is part of (undef if not arr)
-                                         arrayAssignmentKey, // the key of the array on its parent (undef if not array)
-                                         className, // set on arrays since we now null keys
-                                         inParentClassName,
-                                         isRoot,
-                                         path){
-
-                    // prevent assignment messiness
-                    var key = inKey;
-                    var val = inVal;
-                    var container;
-                    var parentClassName = inParentClassName;
-
-                    // default to NOT root
-                    if (typeof(isRoot) == 'undefined'){
-                        isRoot = false;
-                    }
-
-                    // default path to empty string
-                    if (typeof(path) == 'undefined'){
-                        path = '';
-                    }
-
-                    // check container type
-                    // check to make sure the value is set before checking constructor
-                    var canCheckConstructor = !(typeof(val) === 'undefined' || val == null);
-                    if (canCheckConstructor && val.constructor == Array){
-                        container = 'array';
-                    } else if (canCheckConstructor && val.constructor == Object){
-                        container = 'object';
-                    } else {
-                        container = 'value'; // TODO: better type evaluation (dates, etc)
-                    }
-
-                    // set class by looking up my key in the classMap
-                    if (typeof(className) === 'undefined'){
-                        var classMap = config.classMap;
-                        var noClassDefinition = !classMap || !self.config.classMap[key];
-                        var notRootExempt = !isRoot || (isRoot && self.config.enforceRootClass);                    
-                        if (self.config.strictClasses && noClassDefinition && notRootExempt && container == 'object'){
-                            // throw exception if necessary definitions aren't set
-                            walk.exceptions.classNotFound(key);
-                        } else if (!noClassDefinition){
-                            //class definition exists, so set class
-                            className = config.classMap[key];
-                        } 
-                    } else {
-                        // class pre-set, so inheret (this should only happen for items in arrays)
-                    }
-
-                    if (self.config.monitorPerformance){
-                        self.__walk_performanceReport.processed[container] += 1;
-                        if (typeof(className) !== 'undefined' && container != 'array') {
-                            if (typeof(self.__walk_performanceReport.processed.classInstances[className]) === 'undefined'){
-                                self.__walk_performanceReport.processed.classInstances[className] = 1;
-                            } else {
-                                self.__walk_performanceReport.processed.classInstances[className] += 1;
-                            }
-                        }
-                    }
-
-                    //self.config.logger.log("Key", key, ",if in an array, the array is", arrayAssignment, "which can be found on parent via key",arrayAssignmentKey, "The inhereted className is", className, "And parent's className is", parentClassName, "Root?", isRoot);   
-
-                    // match and run callbacks
-                    var matchedPreCallbacks = self.matchedCallbacks(container, className, key, 'preWalk', parentClassName, isRoot);
-                    self.execCallbacks(matchedPreCallbacks, key, val, className, owner, arrayAssignment, 
-                                       arrayAssignmentKey, isRoot, path, [], container, parentClassName);
-                    
-                    // prettiness
-                    var printKey = key ?  key + " -->" : "";
-
-                    // if the property is a list
-                    if (container == 'array'){
-                        // traverse the array
-                        self.log([printKey, "Array  ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);
-                        for ( var i = 0; i < val.length; ++i ){                        
-                            self.traverse(undefined, val[i], owner, val, key, className, className, false, path+self.config.pathFormat(i, true));
-                        }
-                        self.log(undefined, 3);
-                    } 
-
-                    // if the propery is a object
-                    else if (container == 'object') {
-                        // traverse the object
-                        
-                        self.log([printKey, "Object ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);   
-                        for (var xkey in val) {if (val.hasOwnProperty(xkey)) {
-                            self.traverse(xkey, val[xkey], val, undefined, undefined, undefined, className, false, path+self.config.pathFormat(xkey, false));
-                        }}                        
-                        self.log(undefined, 3);
-                    } 
-
-                    // otherwise, eval the prop
-                    else {
-                        self.log([printKey, val, " ( Class:", className, ")", "Path:", path, "Root:", isRoot], 1);         
-                    }
-
-                    // match and run post-traverse callbacks
-                    var matchedPostCallbacks = self.matchedCallbacks(container, className, key, 'postWalk', parentClassName, isRoot);
-                    self.execCallbacks(matchedPostCallbacks, key, val, className, owner, arrayAssignment, 
-                                       arrayAssignmentKey, isRoot, path, matchedPreCallbacks, container,
-                                       parentClassName);
-
-                }
-
-                return this.execute();
-
+                var uuid = Walk.__set_uuid(undefined, undefined, obj, className)
+                Walk.__integratedTraverse(undefined, //key 
+                                          obj, //val
+                                          className, //className
+                                          true, //isRoot
+                                          undefined, // path
+                                          uuid); //uuid
+                
+                Walk.__deconstruct();
+                
             },
             flatten: function( object, key, unique ){
                 //return array of values that match the key
                 var arr = [];
-                walk.walk(object, undefined, {
+                Walk.walk(object, undefined, {
                     callbacks: [
                         {
                             keys: [key],
-                            callback: function(kwargs){
-                                arr.push(kwargs['val']);
+                            callback: function(node){
+                                arr.push(node.val);
                             }
                         }
                     ]
                 });
-                return unique ? walk.unique(arr) : arr;
+                return unique ? Walk.unique(arr) : arr;
             },
             unique: function(arr){
                 var inarr = {};
@@ -327,7 +377,7 @@
                     }
                     nobj[block.shift()] = val;
                 }
-                walk.walk(obj, undefined, {
+                Walk.walk(obj, undefined, {
                     pathFormat: function(key, isArr){
                         return uuid+key;
                     },
@@ -335,16 +385,16 @@
                     callbacks: [
                         {
                             positions: ['preWalk'],                            
-                            callback: function(kwargs){
-                                switch(kwargs['container']){                                    
+                            callback: function(node){
+                                switch(node.container){                                    
                                     case 'array':
-                                        updateObject(newObj, [], kwargs['path']);
+                                        updateObject(newObj, [], node.path);
                                         break;
                                     case 'object':
-                                        updateObject(newObj, {}, kwargs['path']);
+                                        updateObject(newObj, {}, node.path);
                                         break;
                                     case 'value':
-                                        updateObject(newObj, kwargs['val'], kwargs['path']);
+                                        updateObject(newObj, node.val, node.path);
                                         break;
                                 }
                             }
@@ -354,11 +404,11 @@
                 return newObj;
             }
         }
-        return walk;
+        return Walk;
     };
-    if (typeof(walk) === 'undefined'){
-        window.walk = define_walk();
+    if (typeof(Walk) === 'undefined'){
+        window.Walk = defineWalk();
     } else {
-        console.log("Error defining 'walk': already defined.")
+        console.log("Error defining 'Walk': already defined.")
     }
 }(this));
