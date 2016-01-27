@@ -80,7 +80,7 @@ configDefaults: {
     strictClasses: false,
     rootObjectCallbacks: true,
     runCallbacks: true,
-    monitorPerformance: true,
+    monitorPerformance: false,
     pathFormat: function(key, isArr){
         return isArr ? '['+key+']' : '["'+key+'"]';
     },
