@@ -27,7 +27,7 @@
                 strictClasses: false,
                 rootObjectCallbacks: true,
                 runCallbacks: true,
-                monitorPerformance: true,
+                monitorPerformance: false,
                 pathFormat: function(key, isArr){
                     return isArr ? '['+key+']' : '["'+key+'"]';
                 },
@@ -36,6 +36,11 @@
             },
             __data:{
                 reports: [],
+            },
+            __callbackPrioritySort: function(a, b) {
+                var x = a.priority; 
+                var y = b.priority;
+                return ((x < y) ? 1 : ((x > y) ? -1 : 0));
             },
             __partial: function (fn) {
                 var args = Array.prototype.slice.call(arguments, 1);
@@ -84,21 +89,14 @@
                     if (data.isRoot && !Walk.__runtime.config.rootObjectCallbacks){
                         return matched;
                     }                
-                    var callbacks = Walk.__runtime.config.callbacks;
+                    var callbacks = Walk.__runtime.positionCallbacks[position];
+                    if (typeof callbacks == 'undefined'){
+
+                        //console.log(Walk.__runtime.positionCallbacks, position)
+                        return [];
+                    }                  
                     for (var i = 0; i < callbacks.length; ++i) {                            
                         var callback = callbacks[i];
-
-                        // exit if positions are defined and not in list
-                        if (typeof(callback.positions) !== 'undefined') {
-                            if (callback.positions.indexOf(position) === -1 ){
-                                continue;
-                            }
-                        // if undefined, exit if not the default
-                        } else {
-                            if (position !== Walk.defaultCallbackPosition ){
-                                continue;
-                            }
-                        }
 
                         // exit if containers are defined and not in list
                         if (typeof(callback.containers) !== 'undefined'
@@ -293,7 +291,32 @@
                 Object.assign(Walk.__runtime.config, config);
                 if (Walk.__runtime.config.traversalMode !== 'integrated'){
                     Walk.exceptions.notImplemented("Traversal modes other than 'integrated' are");
-                }   
+                } 
+    
+                Walk.__runtime.positionCallbacks = {}
+                // set callbacks initial properties and assign to lists
+                for (var i =0; i < Walk.__runtime.config.callbacks.length; ++i ){
+                    if (typeof Walk.__runtime.config.callbacks[i].priority == 'undefined'){
+                        Walk.__runtime.config.callbacks[i].priority = 0;
+                    }
+                    if (typeof Walk.__runtime.config.callbacks[i].positions == 'undefined' 
+                        || Walk.__runtime.config.callbacks[i].positions.length < 1){
+                        Walk.__runtime.config.callbacks[i].positions = [Walk.defaultCallbackPosition];
+                    }
+                    for( var p = 0; p < Walk.__runtime.config.callbacks[i].positions.length; ++p ){
+                        var position = Walk.__runtime.config.callbacks[i].positions[p];
+                        if (typeof Walk.__runtime.positionCallbacks[position] == 'undefined'){
+                            Walk.__runtime.positionCallbacks[position] = [];
+                        }
+                        Walk.__runtime.positionCallbacks[position].push(Walk.__runtime.config.callbacks[i]);
+                    }                    
+                }
+
+                // sort the position lists
+                for (var key in Walk.__runtime.positionCallbacks) {
+                    Walk.__runtime.positionCallbacks[key] = Walk.__runtime.positionCallbacks[key].sort(Walk.__callbackPrioritySort);
+                }
+
 
             },
             __initializeReport: function(){
