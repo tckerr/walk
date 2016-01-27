@@ -216,23 +216,99 @@
                 className, // set on arrays since we now null keys
                 isRoot,
                 path,
-                parentUuid) {
+                parentUuid,
+                processChildren,
+                preProcessed,
+                uuid) {
 
                 // prevent assignment messiness
                 var key = inKey;
                 var val = inVal;
+                var uuid;
                 if (typeof(isRoot) == 'undefined') { isRoot = false; }
                 if (typeof(path) == 'undefined') { path = ''; }
+                if (typeof(processChildren) == 'undefined') { processChildren = false; }
 
                 // container type
-                var container = Walk.__getContainerType(val);
-                //class name
-                className = Walk.__getClassName(className, key, container, isRoot)
-                // set UUIDs so we can link to parent
-                var uuid = Walk.__set_uuid(parentUuid, key, val, className, parent, isRoot, path, container)
+                if (!preProcessed) { 
+                    container = Walk.__getContainerType(val); 
+                    //class name
+                    className = Walk.__getClassName(className, key, container, isRoot)
+                    // set UUIDs so we can link to parent
+                    uuid = Walk.__set_uuid(parentUuid, key, val, className, parent, isRoot, path, container)
+                } else {
+                    var node = Walk.__runtime.uuidMap[uuid];
+                    className = node.className;
+                    container = node.container;
+                }
 
+                // match and run callbacks
+                var matchedPreCallbacks = Walk.__matchedCallbacks(uuid, 'preWalk');
+                Walk.__execCallbacks(matchedPreCallbacks, uuid);
 
+                var queued = [];                
 
+                if (processChildren){
+                    if (container == 'array') {
+                        for (var i = 0; i < val.length; ++i) {
+                            var queuedUuid = Walk.__breadthTraverse(
+                                undefined, //key
+                                val[i], // val
+                                className, // className
+                                false, //isRoot
+                                path + Walk.__runtime.config.pathFormat(i, true), // path
+                                uuid, // uuid
+                                false, // processChildren
+                                false,// forced (inherit frm self node)
+                                undefined); //uuid
+                            if(queuedUuid){
+                                queued.push(queuedUuid)
+                            }
+                        }
+                    }
+                    else if (container == 'object') {
+                        for (var xkey in val) {
+                            if (val.hasOwnProperty(xkey)) {
+                                var queuedUuid = Walk.__breadthTraverse(
+                                    xkey, //key
+                                    val[xkey], // val
+                                    undefined, // className
+                                    false, //isRoot
+                                    path + Walk.__runtime.config.pathFormat(xkey, false), // path
+                                    uuid,// uuid
+                                    false, // processChildren
+                                    false, // forced (inherit frm self node)
+                                    uuid); //uuid
+                                if(queuedUuid){
+                                    queued.push(queuedUuid)
+                                }
+                            }
+                        }
+                    }
+                }               
+
+                // match and run post-traverse callbacks
+                var matchedPostCallbacks = Walk.__matchedCallbacks(uuid, 'postWalk');
+                Walk.__execCallbacks(matchedPostCallbacks, uuid);
+
+                // now process children
+                for (var i = 0; i < queued.length; ++i) {
+                    var node = Walk.__runtime.uuidMap[uuid];
+                    Walk.__breadthTraverse(
+                        undefined, //key
+                        node.val[i], // val
+                        className, // className
+                        false, //isRoot
+                        path + Walk.__runtime.config.pathFormat(i, true), // path
+                        uuid,
+                        true); // uuid
+                }
+
+                if (container == 'array' || container == 'object'){
+                    return uuid; // needs processing
+                } else {
+                    return false;
+                }
             },
             // does a traversal to build the map AND runs callbacks (inline, so only parent is accessible)
             __depthTraverse: function(inKey, // key of prop on its parent (note this will be the array's key if its an array
@@ -268,7 +344,6 @@
                             path + Walk.__runtime.config.pathFormat(i, true), // path
                             uuid); // uuid
                     }
-                    Walk.__log(undefined, 3);
                 }
                 else if (container == 'object') {
                     for (var xkey in val) {
