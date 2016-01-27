@@ -109,6 +109,7 @@ We want to be able to execute custom functionality on certain properties within 
 ```
 {   
     name: 'optional name',
+    priority: 1,
     containers: ['array'],
     classNames: ['person'],
     keys: ['friends'],
@@ -122,7 +123,7 @@ We want to be able to execute custom functionality on certain properties within 
 }
 ```
 
-Here are the properties you can define, which act as filters:
+Here are the properties you can define, most of which act as filters:
 
 - ```containers```: an array of containers to run on. Options are ```'array'```, ```'object'```, and ```'value'```. If unspecifed, the callback will run on any container.
 - ```classNames```: an array of classNames to run on. The callback will check the class name of the property as it has been resolved in the config's ```classMap```. If unspecifed, the callback will run on any class.
@@ -130,6 +131,7 @@ Here are the properties you can define, which act as filters:
 - ```classKeys```: an object of "className": [keyArray] pairs. The callback will check the key of the property against this list, but will only match on keys from the given class. If unspecified, no keys will be filtered out (assuming the ```keys``` property is unset, otherwise it'll default to that.) Also note that if the ```classNames``` array is defined, any classKeys for classes not in that array will never be processed.
 - ```positions```: an array of positions in the traversal to run on -- think of this as when it should execute. Options are ```'preWalk'``` (before any list/object is traversed), and ```'postWalk'``` (after any list/object is traversed). For properties of container-type ```'value'```, these two run in immediate succession. If unspecifed, the callback will run ```'postWalk'``` (this can be overidden in ```Walk.defaultCallbackPosition```).
 - ```callback```: the actual function to run. See below for the arguments (associated values we'll have access to at the time the callback runs.)
+- ```priority```: an integer value for controlling order of callback operations. Higher priorities run earlier. If unspecified, the priority will default to 0. Remember that callback stacks are grouped by position and property, so the sort will only apply to callbacks in the same grouping.
 
 **Node: the callback argument**: The callback will be passed a single argument, which is an object (node) with the following properties:
 
