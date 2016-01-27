@@ -20,10 +20,10 @@
             },
             defaultCallbackPosition: 'postWalk',
             configDefaults: {
-                log: false,
+                log: false, // TODO: move this to walk function
                 classMap: {},
                 logger: console,
-                traversalMode: 'integrated',
+                traversalMode: 'depth',
                 enforceRootClass: false,
                 strictClasses: false,
                 rootObjectCallbacks: true,
@@ -165,42 +165,22 @@
                         Walk.__runtime.config.logger.groupEnd.apply(console, args);
                     }
                 }
-            },
-            // does a traversal to build the map AND runs callbacks (inline, so only parent is accessible)
-            __integratedTraverse: function(inKey, // key of prop on its parent (note this will be the array's key if its an array
-                inVal, // value of prop
-                className, // set on arrays since we now null keys
-                isRoot,
-                path,
-                parentUuid) {
-
-                // prevent assignment messiness
-                var key = inKey;
-                var val = inVal;
-                var container;
-
-                // default to NOT root
-                if (typeof(isRoot) == 'undefined') {
-                    isRoot = false;
-                }
-
-                // default path to empty string
-                if (typeof(path) == 'undefined') {
-                    path = '';
-                }
-
-                // check container type
+            },            
+            __getContainerType: function(val){
                 // check to make sure the value is set before checking constructor
+                var containerType;
                 var canCheckConstructor = !(typeof(val) === 'undefined' || val == null);
                 if (canCheckConstructor && val.constructor == Array) {
-                    container = 'array';
+                    containerType = 'array';
                 } else if (canCheckConstructor && val.constructor == Object) {
-                    container = 'object';
+                    containerType = 'object';
                 } else {
                     // TODO: better type evaluation (dates, etc)
-                    container = 'value';
+                    containerType = 'value';
                 }
-
+                return containerType
+            },
+            __getClassName: function(className, key, container, isRoot){
                 // set class by looking up my key in the classMap
                 if (typeof(className) === 'undefined') {
                     var classMap = Walk.__runtime.config.classMap;
@@ -208,7 +188,7 @@
                     var notRootExempt = !isRoot || (isRoot && Walk.__runtime.config.enforceRootClass);
                     if (Walk.__runtime.config.strictClasses && noClassDefinition && notRootExempt && container == 'object') {
                         // throw exception if necessary definitions aren't set
-                        walk.exceptions.classNotFound(key);
+                        Walk.exceptions.classNotFound(key);
                     } else if (!noClassDefinition) {
                         //class definition exists, so set class
                         className = Walk.__runtime.config.classMap[key];
@@ -217,6 +197,7 @@
                     // class pre-set, so inheret (this should only happen for items in arrays)
                 }
 
+                // for reports, process class names now
                 if (Walk.__runtime.config.monitorPerformance) {
                     Walk.__data.reports[Walk.__runtime.reportId].processed[container] += 1;
                     if (typeof(className) !== 'undefined' && container != 'array') {
@@ -227,7 +208,50 @@
                         }
                     }
                 }
+                return className;
+            },
+            // does a traversal to build the map AND runs callbacks (inline, so only parent is accessible)
+            __breadthTraverse: function(inKey, // key of prop on its parent (note this will be the array's key if its an array
+                inVal, // value of prop
+                className, // set on arrays since we now null keys
+                isRoot,
+                path,
+                parentUuid) {
 
+                // prevent assignment messiness
+                var key = inKey;
+                var val = inVal;
+                if (typeof(isRoot) == 'undefined') { isRoot = false; }
+                if (typeof(path) == 'undefined') { path = ''; }
+
+                // container type
+                var container = Walk.__getContainerType(val);
+                //class name
+                className = Walk.__getClassName(className, key, container, isRoot)
+                // set UUIDs so we can link to parent
+                var uuid = Walk.__set_uuid(parentUuid, key, val, className, parent, isRoot, path, container)
+
+
+
+            },
+            // does a traversal to build the map AND runs callbacks (inline, so only parent is accessible)
+            __depthTraverse: function(inKey, // key of prop on its parent (note this will be the array's key if its an array
+                inVal, // value of prop
+                className, // set on arrays since we now null keys
+                isRoot,
+                path,
+                parentUuid) {
+
+                // prevent assignment messiness
+                var key = inKey;
+                var val = inVal;
+                if (typeof(isRoot) == 'undefined') { isRoot = false; }
+                if (typeof(path) == 'undefined') { path = ''; }
+
+                // container type
+                var container = Walk.__getContainerType(val);
+                //class name
+                className = Walk.__getClassName(className, key, container, isRoot)
                 // set UUIDs so we can link to parent
                 var uuid = Walk.__set_uuid(parentUuid, key, val, className, parent, isRoot, path, container)
 
@@ -235,15 +259,9 @@
                 var matchedPreCallbacks = Walk.__matchedCallbacks(uuid, 'preWalk');
                 Walk.__execCallbacks(matchedPreCallbacks, uuid);
 
-                // prettiness
-                var printKey = key ? key + " -->" : "";
-
-                // if the property is a list
                 if (container == 'array') {
-                    // traverse the array
-                    Walk.__log([printKey, "Array  ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);
                     for (var i = 0; i < val.length; ++i) {
-                        Walk.__integratedTraverse(undefined, //key
+                        Walk.__depthTraverse(undefined, //key
                             val[i], // val
                             className, // className
                             false, //isRoot
@@ -252,13 +270,10 @@
                     }
                     Walk.__log(undefined, 3);
                 }
-                // if the propery is a object
                 else if (container == 'object') {
-                    // traverse the object                    
-                    Walk.__log([printKey, "Object ( Class:", className, ')', "Path:", path, "Root:", isRoot], 2);
                     for (var xkey in val) {
                         if (val.hasOwnProperty(xkey)) {
-                            Walk.__integratedTraverse(xkey, //key
+                            Walk.__depthTraverse(xkey, //key
                                 val[xkey], // val
                                 undefined, // className
                                 false, //isRoot
@@ -266,12 +281,6 @@
                                 uuid); // uuid
                         }
                     }
-                    Walk.__log(undefined, 3);
-                }
-
-                // otherwise, eval the prop
-                else {
-                    Walk.__log([printKey, val, " ( Class:", className, ")", "Path:", path, "Root:", isRoot], 1);
                 }
 
                 // match and run post-traverse callbacks
@@ -286,8 +295,8 @@
                 Walk.__runtime.uuid = 0;
                 Object.assign(Walk.__runtime.config, Walk.configDefaults);
                 Object.assign(Walk.__runtime.config, config);
-                if (Walk.__runtime.config.traversalMode !== 'integrated') {
-                    Walk.exceptions.notImplemented("Traversal modes other than 'integrated' are");
+                if (Walk.__runtime.config.traversalMode !== 'depth') {
+                    Walk.exceptions.notImplemented("Traversal modes other than 'depth' are");
                 }
 
                 Walk.__runtime.positionCallbacks = {}
@@ -353,7 +362,7 @@
                 }
 
                 var uuid = Walk.__set_uuid(undefined, undefined, obj, className)
-                Walk.__integratedTraverse(undefined,//key 
+                Walk.__depthTraverse(undefined,//key 
                     obj, //val
                     className, //className
                     true, //isRoot
