@@ -31,10 +31,6 @@
             <th>Examples</th>
         </tr>
         <tr>
-            <td>Print a nested representation of the object</td>
-            <td><button onclick="printNested()">Do it!</button></td>
-        </tr>
-        <tr>
             <td>Get all person objects and count their friends. Then sort them descendingly, and print to console.</td>
             <td><button onclick="getFriendCount()">Do it!</button></td>
         </tr>
@@ -63,6 +59,7 @@
 
         window.onload = function(){
             document.getElementById('data').innerHTML = document.getElementById('data').getAttribute('value');
+            window.data = JSON.parse(document.getElementById('data').value);
         };
         
 
@@ -70,7 +67,6 @@
             var data = JSON.parse(document.getElementById('data').value);
             var friendCounts = {};
             var config = {
-                log: false,
                 classMap: {
                     "person": "person",
                     "friends": "person"
@@ -86,7 +82,7 @@
                         },
                         containers: ['array'],
                         callback: function(node){
-                            var parent = node.parent().val;
+                            var parent = node.parent.val;
                             var val = node.val;
                             if (typeof(friendCounts[parent.name]) === 'undefined'){
                                 friendCounts[parent.name] = val.length;
@@ -99,7 +95,7 @@
                 
             }
             var className = document.getElementById('label').value;
-            Walk.walk(data, className, config);
+            var runtime = Walk.walk(data, className, config);
             arr = [];
             for (var key in friendCounts) {
                 arr.push([key, friendCounts[key]]);
@@ -109,18 +105,7 @@
             for (var i = 0; i < arr.length; ++i ){
                 console.log("  ", (i + 1) + ".", arr[i][0], "-", arr[i][1]);
             }
-        }
-
-        function printNested(){
-            var data = JSON.parse(document.getElementById('data').value);
-            var className = document.getElementById('label').value;
-            Walk.walk(data, className, {
-                log: true,
-                classMap: {
-                    "person": "person",
-                    "friends": "person"
-                }
-            });
+            console.log(runtime);
         }
 
         function flatten(){
@@ -139,7 +124,6 @@
             var data = JSON.parse(document.getElementById('data').value);
             var ages = [];
             var config = {
-                log: false,
                 classMap: {
                     "person": "person",
                     "friends": "person"
@@ -152,7 +136,7 @@
                             'person': ['age']
                         },
                         callback: function(node){
-                            console.log("Person", node.parent().val.name, "is", node.val, "years old.");
+                            console.log("Person", node.parent.val.name, "is", node.val, "years old.");
                             ages.push(node.val);
                         }
                     }
@@ -207,7 +191,7 @@
                            'person': ['hometown']
                         },
                         callback: function(node){
-                            var parent = node.parent();
+                            var parent = node.parent;
                             var val = node.val;
                             console.log("Person", parent.val.name, "is from", val);
                         }
@@ -253,6 +237,6 @@
         }
 
     </script>
-    <script src="walk.js"></script>
+    <script src="dist/walk.js"></script>
 </body>
 </html>
