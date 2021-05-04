@@ -1,6 +1,6 @@
 import {Config, Context, PartialConfig} from "./types";
 
-export const defaultCallbackPosition = 'postWalk'
+export const defaultCallbackPosition = 'preWalk'
 
 
 const defaultReport = {
@@ -21,7 +21,7 @@ export const defaultConfig: Config = {
     rootObjectCallbacks: true,
     runCallbacks: true,
     monitorPerformance: false,
-    dataStructure: 'finiteTree',
+    graphMode: 'finiteTree',
     pathFormat: function (key: string, isArr: boolean) {
         return isArr ? '[' + key + ']' : '["' + key + '"]';
     },

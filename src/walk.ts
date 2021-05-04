@@ -1,6 +1,7 @@
 import {Callback, NodeType, Context, PartialConfig, PositionType, WalkNode} from "./types";
 import {buildDefaultContext, defaultCallbackPosition} from "./defaults";
-import {prioritySort} from "./helpers";
+import {executionOrderSort} from "./helpers";
+import {Break} from "./utils";
 
 function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
 
@@ -17,13 +18,14 @@ function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
         for (let i = 0; i < callbacks.length; ++i) {
             const callback = callbacks[i];
 
-            // exit if containerFilters are defined and not in list
-            if (typeof callback.containerFilters !== 'undefined' && callback.containerFilters.indexOf(node.nodeType!) === -1) {
+            // exit if nodeTypeFilters are defined and not in list
+            if (typeof callback.nodeTypeFilters !== 'undefined' && callback.nodeTypeFilters.indexOf(node.nodeType!) === -1) {
                 continue;
             }
 
             // exit if keyFilters are defined and not in list
-            if (typeof callback.keyFilters !== 'undefined' && callback.keyFilters.indexOf(node.keyInParent!) === -1) {
+            if (typeof callback.keyFilters !== 'undefined'
+                && (typeof node.keyInParent === 'number' || callback.keyFilters.indexOf(node.keyInParent!) === -1)) {
                 continue;
             }
 
@@ -34,11 +36,11 @@ function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
 }
 
 function validateVisitation(val: any, ctx: Context): boolean {
-    const mode = ctx.config.dataStructure;
+    const mode = ctx.config.graphMode;
     let parseObject = true;
     if (ctx.seenObjects.indexOf(val) !== -1) {
         if (mode === 'finiteTree') {
-            throw "The object violates the defined structure. Override 'dataStructure' in the config to allow parsing different object structures.";
+            throw "The object violates the defined structure. Override 'graphMode' in the config to allow parsing different object structures.";
         } else if (mode === 'graph') {
             parseObject = false;
         } // otherwise, infinites are allowed
@@ -49,23 +51,17 @@ function validateVisitation(val: any, ctx: Context): boolean {
 }
 
 function execCallbacks(callbacks: Callback[], node: WalkNode, ctx: Context): void {
-    for (let p = 0; p < callbacks.length; ++p) {
-        callbacks[p].hasRun = false; // only in case users want this, not used internally
-    }
     for (let i = 0; i < callbacks.length; ++i) {
         if (ctx.config.monitorPerformance) {
             const cbStackStart = new Date();
             callbacks[i].callback(node);
+            node.executedCallbacks.push(callbacks[i]);
             // @ts-ignore
             ctx.report.callbackProcessingTime += (new Date() - cbStackStart);
         } else {
             callbacks[i].callback(node);
+            node.executedCallbacks.push(callbacks[i]);
         }
-        callbacks[i].hasRun = true;
-        node.executedCallbacks.push(callbacks[i]);
-    }
-    for (let k = 0; k < callbacks.length; ++k) {
-        delete callbacks[k].hasRun;
     }
 }
 
@@ -92,7 +88,8 @@ function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context, queue?
     if (nodeType === 'array') {
         for (let i = 0; i < val.length; ++i) {
             const childData: WalkNode = {
-                keyInParent: undefined,
+                isArrayMember: true,
+                keyInParent: i,
                 rawType: typeof val[i],
                 val: val[i],
                 isRoot: false,
@@ -111,6 +108,7 @@ function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context, queue?
         for (const subKey in val) {
             if (val.hasOwnProperty(subKey)) {
                 const childData: WalkNode = {
+                    isArrayMember: false,
                     keyInParent: subKey,
                     val: val[subKey],
                     rawType: typeof val[subKey],
@@ -149,7 +147,7 @@ function buildContext(config: PartialConfig): Context {
     ctx.config.callbacks.forEach(cb => {
         const callback: Callback = {
             ...cb,
-            priority: typeof cb.priority == 'undefined' ? 0 : cb.priority,
+            executionOrder: typeof cb.executionOrder == 'undefined' ? 0 : cb.executionOrder,
             positionFilters: typeof cb.positionFilters == 'undefined' || cb.positionFilters.length < 1 ? [defaultCallbackPosition] :
                 cb.positionFilters
 
@@ -162,7 +160,7 @@ function buildContext(config: PartialConfig): Context {
     })
 
     for (const key in ctx.callbacksByPosition) {
-        ctx.callbacksByPosition[key] = ctx.callbacksByPosition[key].sort(prioritySort);
+        ctx.callbacksByPosition[key] = ctx.callbacksByPosition[key].sort(executionOrderSort);
     }
 
     return ctx;
@@ -174,6 +172,7 @@ const walk = (obj: object, config: PartialConfig): Context => {
         keyInParent: undefined,
         val: obj,
         rawType: typeof obj,
+        isArrayMember: false,
         isRoot: true,
         path: '',
         nodeType: 'object',
@@ -188,15 +187,7 @@ const walk = (obj: object, config: PartialConfig): Context => {
     try {
         fn(rootNode, context)
     } catch (err) {
-        if (err !== "walk:stopProcess") {
-            if (typeof console.error !== 'undefined') {
-                console.error("Error during walk(): " + err);
-
-            } else {
-                console.log("Error during walk(): " + err);
-            }
-            throw err;
-        }
+        if (!(err instanceof Break)) throw err;
     }
     return context;
 }

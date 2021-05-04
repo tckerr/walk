@@ -23,11 +23,10 @@ export type Report = {
 
 export type Callback = {
     readonly callback: (node: WalkNode) => void,
-    readonly priority?: number,
+    readonly executionOrder?: number,
     readonly positionFilters?: PositionType[]
     readonly keyFilters?: string[],
-    readonly containerFilters?: string[]
-    hasRun?: boolean
+    readonly nodeTypeFilters?: NodeType[]
 }
 
 export type Config = {
@@ -35,7 +34,7 @@ export type Config = {
     readonly callbacks: Callback[]
     readonly monitorPerformance: boolean
     readonly pathFormat: (key: string, isArr: boolean) => string
-    readonly dataStructure: DataStructureType
+    readonly graphMode: DataStructureType
     readonly enforceRootClass: boolean
     readonly strictClasses: boolean
     readonly rootObjectCallbacks: boolean
@@ -47,7 +46,7 @@ export type PartialConfig = {
     readonly callbacks?: Callback[]
     readonly monitorPerformance?: boolean
     readonly pathFormat?: (key: string, isArr: boolean) => string
-    readonly dataStructure?: DataStructureType
+    readonly graphMode?: DataStructureType
     readonly enforceRootClass?: boolean
     readonly strictClasses?: boolean
     readonly rootObjectCallbacks?: boolean
@@ -57,10 +56,11 @@ export type PartialConfig = {
 export type WalkNode = {
     val: any
     isRoot: boolean
+    isArrayMember: boolean
     path: string
     nodeType: NodeType,
     rawType: string,
     executedCallbacks: Callback[]
-    keyInParent?: string
+    keyInParent?: string | number
     parent?: WalkNode
 }

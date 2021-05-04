@@ -1,7 +1,9 @@
-export function prioritySort(a: any, b: any) {
-    const x = a.priority;
-    const y = b.priority;
-    return ((x < y) ? 1 : ((x > y) ? -1 : 0));
+import {Callback} from "./types";
+
+export function executionOrderSort(a: Callback, b: Callback) {
+    const x = a.executionOrder || 0;
+    const y = b.executionOrder || 0;
+    return ((x < y) ? -1 : ((x > y) ? 1 : 0));
 }
 
 export function unique(arr: any[]) {

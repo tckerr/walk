@@ -1,18 +1,16 @@
 import {WalkNode} from "../types";
 import {apply} from "../index";
 
-test("it finds objects by class name", () => {
+test("it runs once per node", () => {
     const data = {
         person: {
             name: 'Bob'
         }
     }
-    const names: string[] = []
-
+    let count = 0;
     apply(data, (node: WalkNode) => {
-        if(node.keyInParent === 'person')
-            names.push(node.val.name)
+        count++;
     })
 
-    expect(names).toEqual(['Bob']);
+    expect(count).toEqual(3);
 });
