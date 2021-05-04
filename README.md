@@ -50,7 +50,7 @@ yields:
 ["c"] --> ["d"]
 ```
 
-The expanded version of this:
+`apply` is a shorthand version of the full `walk` API. The verbose way to do this is:
 
 ```javascript
 import {walk} from 'walkjs';
