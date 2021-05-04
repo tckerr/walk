@@ -1,6 +1,6 @@
 import {walk} from "../index";
-import {WalkNode} from "../types";
 import {Break} from "../utils";
+import {WalkNode} from "../node";
 
 describe("walk", () => {
     it("runs once per node filtered by key", () => {
@@ -135,7 +135,7 @@ describe("walk", () => {
                 callback: (n) => {
                     expect(n.keyInParent).toBeUndefined()
                     expect(n.val).toEqual({})
-                    expect(n.path).toEqual('')
+                    expect(n.getPath()).toEqual('')
                     expect(n.isRoot).toEqual(true)
                     expect(n.nodeType).toEqual('object')
                     expect(n.parent).toBeUndefined()
@@ -156,7 +156,7 @@ describe("walk", () => {
                 keyFilters: ['person'], callback: (n) => {
                     expect(n.keyInParent).toBe('person')
                     expect(n.val).toEqual({name: 'Bob'})
-                    expect(n.path).toEqual('[\"person\"]')
+                    expect(n.getPath()).toEqual('[\"person\"]')
                     expect(n.isRoot).toEqual(false)
                     expect(n.nodeType).toEqual('object')
                     expect(n.parent).toBeTruthy()
@@ -179,7 +179,7 @@ describe("walk", () => {
                 keyFilters: ['name'], callback: (n) => {
                     expect(n.keyInParent).toBe('name')
                     expect(n.val).toEqual('Bob')
-                    expect(n.path).toEqual('[\"person\"][\"name\"]')
+                    expect(n.getPath()).toEqual('[\"person\"][\"name\"]')
                     expect(n.isRoot).toEqual(false)
                     expect(n.nodeType).toEqual('value')
                     expect(n.parent).toBeTruthy()
@@ -202,7 +202,7 @@ describe("walk", () => {
                 keyFilters: ['people'], callback: (n) => {
                     expect(n.keyInParent).toBe('people')
                     expect(n.val).toEqual(['Bob'])
-                    expect(n.path).toEqual('[\"people\"]')
+                    expect(n.getPath()).toEqual('[\"people\"]')
                     expect(n.isRoot).toEqual(false)
                     expect(n.nodeType).toEqual('array')
                     expect(n.parent).toBeTruthy()
@@ -228,7 +228,7 @@ describe("walk", () => {
                         if (!n.isArrayMember) return;
                         expect(n.keyInParent).toBe(0)
                         expect(n.val).toEqual('Bob')
-                        expect(n.path).toEqual('[\"people\"][0]')
+                        expect(n.getPath()).toEqual('[\"people\"][0]')
                         expect(n.isRoot).toEqual(false)
                         expect(n.nodeType).toEqual('value')
                         expect(n.parent).toBeTruthy()
@@ -297,6 +297,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(a, {
+            monitorPerformance: true,
             graphMode: "graph",
             callbacks: [{
                 callback: (n) => {
@@ -339,11 +340,11 @@ describe("walk", () => {
             callbacks: [
                 {
                     positionFilters: ["preWalk"],
-                    callback: (n) => preKeys.push(n.path)
+                    callback: (n) => preKeys.push(n.getPath())
                 },
                 {
                     positionFilters: ["postWalk"],
-                    callback: (n) => postKeys.push(n.path)
+                    callback: (n) => postKeys.push(n.getPath())
                 }
             ]
         })
@@ -377,10 +378,10 @@ describe("walk", () => {
             traversalMode: "breadth",
             callbacks: [{
                 positionFilters: ["preWalk"],
-                callback: (n) => preKeys.push(n.path)
+                callback: (n) => preKeys.push(n.getPath())
             }, {
                 positionFilters: ["postWalk"],
-                callback: (n) => postKeys.push(n.path)
+                callback: (n) => postKeys.push(n.getPath())
             },
 
             ]
