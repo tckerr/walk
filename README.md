@@ -90,7 +90,7 @@ See the reference for more details!
 
 # Reference
 
-#### ```Walk.walk(obj: object, config: Config)```
+#### ```walk(obj: object, config: Config)```
 
 The primary method for traversing an object and injecting callbacks into the traversal.
 
@@ -124,7 +124,7 @@ const defaultConfig = {
 
 A shorthand version of ```walk()``` that runs the callback for all nodes, in ```postWalk``` mode.
 
-#### `class Break`:
+#### `Break`:
 
 Throwing an instance of this class within a callback will halt processing completely. This allows for early access, and
 limited processing of infinite trees.
@@ -133,7 +133,7 @@ limited processing of infinite trees.
 
 Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
 
-#### `Walk.find(obj: object, value: any[, typeConversion: boolean])`:
+#### `find(obj: object, value: any[, typeConversion: boolean])`:
 
 This method returns all *values* who match within the `object`'s tree. Set the optional parameter `typeConversion`
 to `true` to do a `==` comparison (instead of the default `===`.)
@@ -170,6 +170,8 @@ Here are the properties you can define in a calback configuration, most of which
 - `positionFilters`: an array of positions in the traversal to run on -- think of this as when it should execute.
   Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed).
   For properties of container-type `'value'`, these two run in immediate
+
+Note that for async functions, `callback` may alternatively return a `Promise<void>`.
 
 ### Nodes
 
