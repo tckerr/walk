@@ -16,15 +16,11 @@ const defaultReport = {
 
 export const defaultConfig: Config = {
     traversalMode: 'depth',
-    enforceRootClass: false,
-    strictClasses: false,
     rootObjectCallbacks: true,
     runCallbacks: true,
     monitorPerformance: false,
     graphMode: 'finiteTree',
-    pathFormat: function (key: string, isArr: boolean) {
-        return isArr ? '[' + key + ']' : '["' + key + '"]';
-    },
+    pathFormat: (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`,
     callbacks: []
 }
 

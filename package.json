@@ -24,8 +24,8 @@
     "type": "git",
     "url": "git+https://github.com/tckerr/walk.git"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["graph", "tree", "traversal", "object", "walk"],
+  "author": "Tom Kerr",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/tckerr/walk/issues"

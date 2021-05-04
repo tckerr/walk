@@ -35,8 +35,6 @@ export type Config = {
     readonly monitorPerformance: boolean
     readonly pathFormat: (key: string, isArr: boolean) => string
     readonly graphMode: DataStructureType
-    readonly enforceRootClass: boolean
-    readonly strictClasses: boolean
     readonly rootObjectCallbacks: boolean
     readonly runCallbacks: boolean
 }
