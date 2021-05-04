@@ -64,7 +64,7 @@ function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<Callbac
         ? (child: WalkNode) => queue.push(child)
         : (child: WalkNode) => process(child, 'depth', ctx)
 
-    node.children(ctx).forEach(traverse)
+    node.children.forEach(traverse)
 
     execCallbacks(matchCallbacks<Callback>(node, 'postWalk', ctx), node);
 
@@ -83,7 +83,7 @@ async function processAsync(node: WalkNode, mode: 'breadth' | 'depth', ctx: Cont
         ? async (child: WalkNode) => Promise.resolve(queue.push(child))
         : async (child: WalkNode) => await processAsync(child, 'depth', ctx)
 
-    const children = node.children(ctx);
+    const children = node.children;
     for (let i = 0; i < children.length; i++)
         await traverse(children[i])
 

@@ -34,14 +34,14 @@ export class WalkNode {
         )
     }
 
-    public static fromObjectKey(parent: WalkNode, key: string, ctx: Context): WalkNode {
+    public static fromObjectKey(parent: WalkNode, key: string): WalkNode {
         return new WalkNode(
             parent.val[key], false, false, getNormalizedType(parent.val[key]), typeof parent.val[key],
             [], key, parent
         )
     }
 
-    public static fromArrayIndex(parent: WalkNode, index: number, ctx: Context): WalkNode {
+    public static fromArrayIndex(parent: WalkNode, index: number): WalkNode {
         return new WalkNode(
             parent.val[index], false, true, getNormalizedType(parent.val[index]), typeof parent.val[index],
             [], index, parent
@@ -56,15 +56,15 @@ export class WalkNode {
         return this.parent!.getPath(pathFormat) + pathFormat(this.keyInParent!.toString(), this.isArrayMember)
     }
 
-    public children(ctx: Context): WalkNode[] {
+    public get children(): WalkNode[] {
         if (typeof this._children !== 'undefined')
             return this._children;
 
         if (this.nodeType === 'array')
-            this._children = this.val.map((_: any, idx: number) => WalkNode.fromArrayIndex(this, idx, ctx))
+            this._children = this.val.map((_: any, idx: number) => WalkNode.fromArrayIndex(this, idx))
 
         else if (this.nodeType === 'object')
-            this._children = Object.keys(this.val).map(key => WalkNode.fromObjectKey(this, key, ctx))
+            this._children = Object.keys(this.val).map(key => WalkNode.fromObjectKey(this, key))
 
         else
             this._children = []
@@ -72,9 +72,9 @@ export class WalkNode {
         return this._children!;
     }
 
-    public siblings(ctx: Context): WalkNode[] {
+    public get siblings(): WalkNode[] {
         if (!this.parent)
             return []
-        return this.parent.children(ctx).filter((c) => c.id !== this.id)
+        return this.parent.children.filter((c) => c.id !== this.id)
     }
 }
