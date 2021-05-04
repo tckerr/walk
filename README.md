@@ -78,10 +78,6 @@ The primary method for traversing an object and injecting callbacks into the tra
 
 - `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
 - `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
-- `monitorPerformance: boolean`: Set this to `true` to print a performance report to console after the walk is complete.
-- `pathFormat: (key: string|number, isArr: boolean) => string`: a function that returns a path segment from a key (
-  property name or array index). The first argument is the key and the second argument is a boolean that is `true` when
-  the key is an array index, `false` when it is an object key.
 - `callbacks: Callback[]`: an array of callback objects. See the Callback section for more information.
 - `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are ```depth``` for *depth-first*
   processing and ```breadth``` for *breadth-first* processing.
@@ -89,7 +85,7 @@ The primary method for traversing an object and injecting callbacks into the tra
   setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once.
   Graphs will only process object/array references one time. Infinite trees will always continue to process -
   use ```throw new Break()``` to end the processing manually. *Warning:
-  ininite trees will never complete processing if a callback doesn't ```throw new Break()```.*
+  infinite trees will never complete processing if a callback doesn't ```throw new Break()```.*
 
 The configuration defaults to the following:
 
@@ -100,7 +96,6 @@ const defaultConfig = {
     runCallbacks: true,
     monitorPerformance: false,
     graphMode: 'finiteTree',
-    pathFormat: (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`,
     callbacks: []
 }
 ```
@@ -167,8 +162,9 @@ Here are the properties you can define in a calback configuration, most of which
 - `nodeType: NodeType`: The type of node the property is.
 - `isRoot: boolean`: A boolean that is set to ```true``` if the property is a root object, otherwise ```false```.
 - `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property.
-- `path` The path to the value. For example, if the variable you're walking is named `myObject`, the path will
+- `getPath(pathFormat?: (key: string, isArr: boolean) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
   look something like `["friends"][10]["friends"][2]["name"]`, such that
-  calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`. You can set the path format in
-  the config (see `pathFormat`).
+  calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`.
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
+- `children: WalkNode[]`: A list of all child nodes.
+- `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).

@@ -1,6 +1,6 @@
 import {unique, updateObjectViaPathString} from "./helpers";
-import {WalkNode} from "./types";
 import walk from "./walk";
+import {WalkNode} from "./node";
 
 export function flatten(obj: object, key: string, onlyUnique: boolean) {
     //return array of values that match the key
@@ -36,22 +36,22 @@ export function findAll<T>(obj: object, value: T, typeConversion: boolean = fals
 export function deepCopy(obj: object) {
     const newObj = {};
     const uuid = 'WALK:DEEP-COPY:DELIMITER';
+    const format = (key: string) => uuid + key;
 
     walk(obj, {
-        pathFormat: key => uuid + key,
         rootObjectCallbacks: false,
         callbacks: [{
             positionFilters: ['preWalk'],
             callback: function (node) {
                 switch (node.nodeType) {
                     case 'array':
-                        updateObjectViaPathString(newObj, [], node.path, uuid);
+                        updateObjectViaPathString(newObj, [], node.getPath(format), uuid);
                         break;
                     case 'object':
-                        updateObjectViaPathString(newObj, {}, node.path, uuid);
+                        updateObjectViaPathString(newObj, {}, node.getPath(format), uuid);
                         break;
                     case 'value':
-                        updateObjectViaPathString(newObj, node.val, node.path, uuid);
+                        updateObjectViaPathString(newObj, node.val, node.getPath(format), uuid);
                         break;
                 }
             }

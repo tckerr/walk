@@ -1,145 +1,75 @@
-import {Callback, NodeType, Context, PartialConfig, PositionType, WalkNode} from "./types";
+import {Callback, Context, PartialConfig, PositionType} from "./types";
 import {buildDefaultContext, defaultCallbackPosition} from "./defaults";
 import {executionOrderSort} from "./helpers";
 import {Break} from "./utils";
+import {WalkNode} from "./node";
 
 function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
 
-    const runCallbacks = ctx.config.runCallbacks;
-    let matched: any[] = [];
-    if (runCallbacks) {
-        if (node.isRoot && !ctx.config.rootObjectCallbacks) {
-            return matched;
-        }
-        const callbacks = ctx.callbacksByPosition[position];
-        if (typeof callbacks == 'undefined') {
-            return [];
-        }
-        for (let i = 0; i < callbacks.length; ++i) {
-            const callback = callbacks[i];
+    if (!ctx.config.runCallbacks)
+        return []
 
-            // exit if nodeTypeFilters are defined and not in list
-            if (typeof callback.nodeTypeFilters !== 'undefined' && callback.nodeTypeFilters.indexOf(node.nodeType!) === -1) {
-                continue;
-            }
+    if (node.isRoot && !ctx.config.rootObjectCallbacks)
+        return [];
 
-            // exit if keyFilters are defined and not in list
-            if (typeof callback.keyFilters !== 'undefined'
-                && (typeof node.keyInParent === 'number' || callback.keyFilters.indexOf(node.keyInParent!) === -1)) {
-                continue;
-            }
-
-            matched.push(callback);
-        }
+    const callbacks = ctx.callbacksByPosition[position];
+    if (typeof callbacks == 'undefined') {
+        return [];
     }
-    return matched;
+
+    return callbacks
+        .filter(cb => (cb.nodeTypeFilters?.indexOf(node.nodeType!) ?? 1) !== -1)
+        .filter(cb =>
+            typeof cb.keyFilters === 'undefined'
+            || (typeof node.keyInParent !== 'number' && cb.keyFilters.indexOf(node.keyInParent!) !== -1))
 }
 
-function validateVisitation(val: any, ctx: Context): boolean {
-    const mode = ctx.config.graphMode;
-    let parseObject = true;
-    if (ctx.seenObjects.indexOf(val) !== -1) {
-        if (mode === 'finiteTree') {
-            throw "The object violates the defined structure. Override 'graphMode' in the config to allow parsing different object structures.";
-        } else if (mode === 'graph') {
-            parseObject = false;
-        } // otherwise, infinites are allowed
-    } else {
-        ctx.seenObjects.push(val);
-    }
-    return parseObject;
+function validateVisitation(node: WalkNode, ctx: Context): boolean {
+    const seen = ctx.seenObjects.indexOf(node.val) !== -1;
+    if (seen && ctx.config.graphMode === 'graph')
+        return false;
+
+    if (seen && ctx.config.graphMode === 'finiteTree')
+        throw "The object violates the defined structure. Override 'graphMode' in the config to allow parsing different object structures.";
+
+    ctx.seenObjects.push(node.val)
+    return true;
 }
 
-function execCallbacks(callbacks: Callback[], node: WalkNode, ctx: Context): void {
-    for (let i = 0; i < callbacks.length; ++i) {
-        if (ctx.config.monitorPerformance) {
-            const cbStackStart = new Date();
-            callbacks[i].callback(node);
-            node.executedCallbacks.push(callbacks[i]);
-            // @ts-ignore
-            ctx.report.callbackProcessingTime += (new Date() - cbStackStart);
-        } else {
-            callbacks[i].callback(node);
-            node.executedCallbacks.push(callbacks[i]);
-        }
-    }
+function execCallbacks(callbacks: Callback[], node: WalkNode): void {
+    callbacks.forEach(cb => {
+        cb.callback(node)
+        node.executedCallbacks.push(cb);
+    })
 }
 
-function getNormalizedType(val: any): NodeType {
-    if (Array.isArray(val))
-        return 'array'
-    else if (typeof val === 'object')
-        return 'object'
-    return 'value'
+function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context): WalkNode[] {
+
+    if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
+        return []
+
+    execCallbacks(matchCallbacks(node, 'preWalk', ctx), node);
+
+    const queue: WalkNode[] = []
+    const traverse = mode === 'breadth'
+        ? (child: WalkNode) => queue.push(child)
+        : (child: WalkNode) => process(child, 'depth', ctx)
+
+    node.children(ctx).forEach(traverse)
+
+    execCallbacks(matchCallbacks(node, 'postWalk', ctx), node);
+
+    return queue;
 }
 
-function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context, queue?: any[]) {
-
-    let {val, path, nodeType} = node;
-
-    const isNotValue = nodeType === 'object' || nodeType === 'array';
-    if (isNotValue && !validateVisitation(val, ctx))
-        return
-
-    const matchedPreCallbacks = matchCallbacks(node, 'preWalk', ctx);
-    execCallbacks(matchedPreCallbacks, node, ctx);
-
-    // add children to queue
-    if (nodeType === 'array') {
-        for (let i = 0; i < val.length; ++i) {
-            const childData: WalkNode = {
-                isArrayMember: true,
-                keyInParent: i,
-                rawType: typeof val[i],
-                val: val[i],
-                isRoot: false,
-                path: path + ctx.config.pathFormat(i.toString(), true),
-                parent: node,
-                executedCallbacks: [],
-                nodeType: getNormalizedType(val[i])
-            };
-            if (mode === 'breadth') {
-                queue!.push(childData);
-            } else if (mode === 'depth') {
-                process(childData, 'depth', ctx);
-            }
-        }
-    } else if (nodeType === 'object') {
-        for (const subKey in val) {
-            if (val.hasOwnProperty(subKey)) {
-                const childData: WalkNode = {
-                    isArrayMember: false,
-                    keyInParent: subKey,
-                    val: val[subKey],
-                    rawType: typeof val[subKey],
-                    isRoot: false,
-                    path: path + ctx.config.pathFormat(subKey, false),
-                    parent: node,
-                    executedCallbacks: [],
-                    nodeType: getNormalizedType(val[subKey]),
-                };
-                if (mode === 'breadth') {
-                    queue!.push(childData);
-                } else if (mode === 'depth') {
-                    process(childData, 'depth', ctx);
-                }
-            }
-        }
-    }
-    // match and run post-traverse callbacks
-    const matchedPostCallbacks = matchCallbacks(node, 'postWalk', ctx);
-    execCallbacks(matchedPostCallbacks, node, ctx);
+function depthTraverse(root: WalkNode, ctx: Context) {
+    process(root, 'depth', ctx);
 }
 
-function __depthTraverse(inputData: any, ctx: Context) {
-    process(inputData, 'depth', ctx, undefined);
-}
-
-function __breadthTraverse(inputData: any, ctx: Context) {
-    const queue: any = [];
-    process(inputData, 'breadth', ctx, queue);
+function breadthTraverse(root: WalkNode, ctx: Context) {
+    let queue: WalkNode[] = [root];
+    do queue = queue.concat(process(queue.shift()!, 'breadth', ctx));
     while (queue.length > 0)
-        process(queue.shift(), 'breadth', ctx, queue);
 }
 
 function buildContext(config: PartialConfig): Context {
@@ -168,27 +98,20 @@ function buildContext(config: PartialConfig): Context {
 
 const walk = (obj: object, config: PartialConfig): Context => {
     const context = buildContext(config);
-    const rootNode: WalkNode = ({
-        keyInParent: undefined,
-        val: obj,
-        rawType: typeof obj,
-        isArrayMember: false,
-        isRoot: true,
-        path: '',
-        nodeType: 'object',
-        parent: undefined,
-        executedCallbacks: []
-    })
+    const rootNode = WalkNode.fromRoot(obj)
 
     const fn = context.config.traversalMode === 'depth'
-        ? __depthTraverse
-        : __breadthTraverse
+        ? depthTraverse
+        : breadthTraverse
 
     try {
         fn(rootNode, context)
     } catch (err) {
-        if (!(err instanceof Break)) throw err;
+        if (!(err instanceof Break))
+            throw err;
     }
+
     return context;
 }
+
 export default walk;

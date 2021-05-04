@@ -1,5 +1,5 @@
-import {WalkNode} from "../types";
 import {apply} from "../index";
+import {WalkNode} from "../node";
 
 test("it runs once per node", () => {
     const data = {
