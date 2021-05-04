@@ -4,20 +4,24 @@ export const defaultCallbackPosition = 'preWalk'
 
 export const defaultPathFormat = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
 
-export const defaultConfig: Config = {
-    traversalMode: 'depth',
-    rootObjectCallbacks: true,
-    runCallbacks: true,
-    graphMode: 'finiteTree',
-    callbacks: []
+export function buildDefaultConfig<T>() : Config<T> {
+    return {
+        traversalMode: 'depth',
+        rootObjectCallbacks: true,
+        runCallbacks: true,
+        graphMode: 'finiteTree',
+        callbacks: []
+    }
 }
 
-export const buildDefaultContext = (config: PartialConfig): Context => ({
-    config: {
-        ...defaultConfig,
-        ...config,
-    },
-    nodes: {},
-    seenObjects: [],
-    callbacksByPosition: {},
-})
+export function buildDefaultContext<T>(config: PartialConfig<T>): Context<T> {
+    return {
+        config: {
+            ...buildDefaultConfig<T>(),
+            ...config,
+        },
+        nodes: {},
+        seenObjects: [],
+        callbacksByPosition: {},
+    }
+}

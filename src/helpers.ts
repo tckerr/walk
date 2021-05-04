@@ -1,6 +1,6 @@
-import {Callback} from "./types";
+import {IOrderable} from "./types";
 
-export function executionOrderSort(a: Callback, b: Callback) {
+export function executionOrderSort<T extends IOrderable>(a: T, b: T) {
     const x = a.executionOrder || 0;
     const y = b.executionOrder || 0;
     return ((x < y) ? -1 : ((x > y) ? 1 : 0));

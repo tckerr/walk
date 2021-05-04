@@ -3,6 +3,8 @@
 1. [Description](#description)
 2. [Installation](#installation)
 3. [Usage](#usage)
+    - [Synchronous](#synchronous)
+    - [Async](#async)
 4. [Reference](#reference)
     - [Callbacks](#callbacks)
     - [Nodes](#nodes)
@@ -21,6 +23,8 @@ It also provides some convenience functions, such as deep copying objects.
 `npm install walkjs --save`
 
 # Usage
+
+## Synchronous
 
 ```typescript
 import {apply} from 'walkjs';
@@ -64,6 +68,22 @@ const config = {
 }
 
 walk(exampleObject, config);
+```
+
+## Async
+
+Works almost exactly the same as the sync version, but has an async signature. Note that all callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
+
+```typescript
+import {applyAsync, walkAsync} from 'walkjs';
+
+const exampleObject = {
+    'a': 1,
+    'b': [2, 3, 4],
+    'c': {'d': 5}
+}
+
+await apply(exampleObject, async (node) => await someAsyncOperation())
 ```
 
 See the reference for more details!
