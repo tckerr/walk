@@ -1,4 +1,6 @@
 import walk from "../index";
+import {Config, WalkNode} from "../types";
+import {defaultConfig} from "../defaults";
 
 test("it finds objects by class name", () => {
     const data = {
@@ -7,22 +9,18 @@ test("it finds objects by class name", () => {
         }
     }
     const names: string[] = []
-    const config = {
-        classMap: {
-            "person": "person",
-        },
+    const config: Config = {
+        ...defaultConfig,
         callbacks: [
             {
-                classNames: ['person'],
-                callback: function (node: any) {
-                    names.push(node.val.name)
-                }
+                keyFilters: ['person'],
+                callback: (node: WalkNode) => names.push(node.val.name)
             }
         ]
     }
 
 
-    walk(data, undefined, config)
+    walk(data, config)
 
     expect(names).toEqual(['Bob']);
 });
