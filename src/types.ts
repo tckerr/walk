@@ -6,7 +6,7 @@ export type Context = {
     report: Report
 }
 
-export type ContainerType = 'array' | 'object' | 'value';
+export type NodeType = 'array' | 'object' | 'value';
 export type DataStructureType = 'finiteTree' | 'tree' | 'graph' | 'infinite';
 export type PositionType = 'preWalk' | 'postWalk'
 
@@ -42,18 +42,25 @@ export type Config = {
     readonly runCallbacks: boolean
 }
 
+export type PartialConfig = {
+    readonly traversalMode?: 'depth' | 'breadth'
+    readonly callbacks?: Callback[]
+    readonly monitorPerformance?: boolean
+    readonly pathFormat?: (key: string, isArr: boolean) => string
+    readonly dataStructure?: DataStructureType
+    readonly enforceRootClass?: boolean
+    readonly strictClasses?: boolean
+    readonly rootObjectCallbacks?: boolean
+    readonly runCallbacks?: boolean
+}
+
 export type WalkNode = {
     val: any
     isRoot: boolean
     path: string
-    container: ContainerType,
-    type: string,
+    nodeType: NodeType,
+    rawType: string,
     executedCallbacks: Callback[]
-    meta: {
-        children: WalkNode[],
-        parents: WalkNode[]
-    }
-
     keyInParent?: string
     parent?: WalkNode
 }

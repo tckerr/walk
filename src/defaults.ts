@@ -1,4 +1,4 @@
-import {Config, Context} from "./types";
+import {Config, Context, PartialConfig} from "./types";
 
 export const defaultCallbackPosition = 'postWalk'
 
@@ -28,7 +28,7 @@ export const defaultConfig: Config = {
     callbacks: []
 }
 
-export const buildDefaultContext = (config: Config): Context => ({
+export const buildDefaultContext = (config: PartialConfig): Context => ({
     config: {
         ...defaultConfig,
         ...config,
