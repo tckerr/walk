@@ -1,10 +1,10 @@
-import {Callback, Context, PartialConfig, PositionType} from "./types";
+import {AsyncCallback, BaseCallback, Callback, Context, PartialConfig, PositionType} from "./types";
 import {buildDefaultContext, defaultCallbackPosition} from "./defaults";
 import {executionOrderSort} from "./helpers";
 import {Break} from "./utils";
 import {WalkNode} from "./node";
 
-function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
+function matchCallbacks<T extends BaseCallback>(node: WalkNode, position: PositionType, ctx: Context<T>): T[] {
 
     if (!ctx.config.runCallbacks)
         return []
@@ -18,13 +18,14 @@ function matchCallbacks(node: WalkNode, position: PositionType, ctx: Context) {
     }
 
     return callbacks
+        .map(cb => cb as T)
         .filter(cb => (cb.nodeTypeFilters?.indexOf(node.nodeType!) ?? 1) !== -1)
         .filter(cb =>
             typeof cb.keyFilters === 'undefined'
             || (typeof node.keyInParent !== 'number' && cb.keyFilters.indexOf(node.keyInParent!) !== -1))
 }
 
-function validateVisitation(node: WalkNode, ctx: Context): boolean {
+function validateVisitation<T>(node: WalkNode, ctx: Context<T>): boolean {
     const seen = ctx.seenObjects.indexOf(node.val) !== -1;
     if (seen && ctx.config.graphMode === 'graph')
         return false;
@@ -43,12 +44,20 @@ function execCallbacks(callbacks: Callback[], node: WalkNode): void {
     })
 }
 
-function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context): WalkNode[] {
+async function execCallbacksAsync(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
+    for (let i = 0; i < callbacks.length; i++) {
+        const cb = callbacks[i];
+        await cb.callback(node)
+        node.executedCallbacks.push(cb);
+    }
+}
+
+function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<Callback>): WalkNode[] {
 
     if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
         return []
 
-    execCallbacks(matchCallbacks(node, 'preWalk', ctx), node);
+    execCallbacks(matchCallbacks<Callback>(node, 'preWalk', ctx), node);
 
     const queue: WalkNode[] = []
     const traverse = mode === 'breadth'
@@ -57,25 +66,36 @@ function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context): WalkN
 
     node.children(ctx).forEach(traverse)
 
-    execCallbacks(matchCallbacks(node, 'postWalk', ctx), node);
+    execCallbacks(matchCallbacks<Callback>(node, 'postWalk', ctx), node);
 
     return queue;
 }
 
-function depthTraverse(root: WalkNode, ctx: Context) {
-    process(root, 'depth', ctx);
+async function processAsync(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<AsyncCallback>): Promise<WalkNode[]> {
+
+    if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
+        return []
+
+    await execCallbacksAsync(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
+
+    const queue: WalkNode[] = []
+    const traverse = mode === 'breadth'
+        ? async (child: WalkNode) => Promise.resolve(queue.push(child))
+        : async (child: WalkNode) => await processAsync(child, 'depth', ctx)
+
+    const children = node.children(ctx);
+    for (let i = 0; i < children.length; i++)
+        await traverse(children[i])
+
+    await execCallbacksAsync(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
+
+    return queue;
 }
 
-function breadthTraverse(root: WalkNode, ctx: Context) {
-    let queue: WalkNode[] = [root];
-    do queue = queue.concat(process(queue.shift()!, 'breadth', ctx));
-    while (queue.length > 0)
-}
-
-function buildContext(config: PartialConfig): Context {
-    const ctx: Context = buildDefaultContext(config)
+function buildContext<T extends BaseCallback>(config: PartialConfig<T>): Context<T> {
+    const ctx: Context<T> = buildDefaultContext<T>(config)
     ctx.config.callbacks.forEach(cb => {
-        const callback: Callback = {
+        const callback: T = {
             ...cb,
             executionOrder: typeof cb.executionOrder == 'undefined' ? 0 : cb.executionOrder,
             positionFilters: typeof cb.positionFilters == 'undefined' || cb.positionFilters.length < 1 ? [defaultCallbackPosition] :
@@ -96,16 +116,18 @@ function buildContext(config: PartialConfig): Context {
     return ctx;
 }
 
-const walk = (obj: object, config: PartialConfig): Context => {
+export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallback>): Promise<Context<AsyncCallback>> => {
     const context = buildContext(config);
     const rootNode = WalkNode.fromRoot(obj)
 
-    const fn = context.config.traversalMode === 'depth'
-        ? depthTraverse
-        : breadthTraverse
-
     try {
-        fn(rootNode, context)
+        if(context.config.traversalMode === 'depth'){
+            await processAsync(rootNode, 'depth', context);
+        } else {
+            let queue: WalkNode[] = [rootNode];
+            do queue = queue.concat(await processAsync(queue.shift()!, 'breadth', context));
+            while (queue.length > 0)
+        }
     } catch (err) {
         if (!(err instanceof Break))
             throw err;
@@ -114,4 +136,22 @@ const walk = (obj: object, config: PartialConfig): Context => {
     return context;
 }
 
-export default walk;
+export const walk = (obj: object, config: PartialConfig<Callback>): Context<Callback> => {
+    const context = buildContext(config);
+    const rootNode = WalkNode.fromRoot(obj)
+
+    try {
+        if(context.config.traversalMode === 'depth'){
+            process(rootNode, 'depth', context);
+        } else {
+            let queue: WalkNode[] = [rootNode];
+            do queue = queue.concat(process(queue.shift()!, 'breadth', context));
+            while (queue.length > 0)
+        }
+    } catch (err) {
+        if (!(err instanceof Break))
+            throw err;
+    }
+
+    return context;
+}

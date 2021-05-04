@@ -1,5 +1,5 @@
 import {unique, updateObjectViaPathString} from "./helpers";
-import walk from "./walk";
+import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
 
 export function flatten(obj: object, key: string, onlyUnique: boolean) {
@@ -18,6 +18,10 @@ export function flatten(obj: object, key: string, onlyUnique: boolean) {
 
 export function apply(obj: object, callback: (node: WalkNode) => void) {
     walk(obj, {callbacks: [{callback}]});
+}
+
+export async function applyAsync(obj: object, callback: (node: WalkNode) => Promise<void>) {
+    await walkAsync(obj, {callbacks: [{callback}]});
 }
 
 export function findAll<T>(obj: object, value: T, typeConversion: boolean = false): T[] {
@@ -42,7 +46,7 @@ export function deepCopy(obj: object) {
         rootObjectCallbacks: false,
         callbacks: [{
             positionFilters: ['preWalk'],
-            callback: function (node) {
+            callback: function (node: WalkNode) {
                 switch (node.nodeType) {
                     case 'array':
                         updateObjectViaPathString(newObj, [], node.getPath(format), uuid);
