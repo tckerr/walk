@@ -90,9 +90,13 @@ See the reference for more details!
 
 # Reference
 
-#### ```walk(obj: object, config: Config)```
+#### `walk(obj: object, config: Config<Callback>): void`
 
 The primary method for traversing an object and injecting callbacks into the traversal.
+
+#### `walkAsync(obj: object, config: Config<AsyncCallback>): Promise<void>`
+
+Async version of `walk` which returns a promise.
 
 **Config options**:
 
@@ -121,9 +125,13 @@ const defaultConfig = {
 }
 ```
 
-#### `apply(obj: object, callback: (node: NodeType) => void)`:
+#### `apply(obj: object, ...callbacks: ((node: NodeType) => void)[]): void`:
 
-A shorthand version of ```walk()``` that runs the callback for all nodes, in ```postWalk``` mode.
+A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
+
+#### `applyAsync(obj: object, ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]): Promise<void>`:
+
+Async version of `apply` which returns a promise.
 
 #### `Break`:
 

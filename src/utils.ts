@@ -1,6 +1,7 @@
 import {unique, updateObjectViaPathString} from "./helpers";
 import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
+import {AsyncCb, Cb} from "./types";
 
 export function flatten(obj: object, key: string, onlyUnique: boolean) {
     //return array of values that match the key
@@ -16,12 +17,12 @@ export function flatten(obj: object, key: string, onlyUnique: boolean) {
     return onlyUnique ? unique(arr) : arr;
 }
 
-export function apply(obj: object, callback: (node: WalkNode) => void) {
-    walk(obj, {callbacks: [{callback}]});
+export function apply(obj: object, ...callbacks: Cb[]) {
+    walk(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export async function applyAsync(obj: object, callback: (node: WalkNode) => Promise<void>) {
-    await walkAsync(obj, {callbacks: [{callback}]});
+export async function applyAsync(obj: object, ...callbacks: AsyncCb[]) {
+    await walkAsync(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
 export function findAll<T>(obj: object, value: T, typeConversion: boolean = false): T[] {

@@ -15,6 +15,9 @@ export interface IOrderable {
     readonly executionOrder?: number
 }
 
+export type Cb = (node: WalkNode) => void;
+export type AsyncCb = Cb | ((node: WalkNode) => Promise<void>);
+
 export type BaseCallback = IOrderable & {
     readonly executionOrder?: number,
     readonly positionFilters?: PositionType[]
@@ -23,11 +26,11 @@ export type BaseCallback = IOrderable & {
 }
 
 export type Callback = BaseCallback & {
-    readonly callback: (node: WalkNode) => void,
+    readonly callback: Cb,
 }
 
 export type AsyncCallback = BaseCallback & {
-    readonly callback: ((node: WalkNode) => Promise<void>) | ((node: WalkNode) => void),
+    readonly callback: AsyncCb,
 }
 
 export type Config<T extends BaseCallback> = {
