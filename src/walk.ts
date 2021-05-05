@@ -52,6 +52,19 @@ async function execCallbacksAsync(callbacks: AsyncCallback[], node: WalkNode): P
     }
 }
 
+
+async function execCallbacksAsyncInParallel(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
+    const promises: Promise<any>[] = []
+    for (let i = 0; i < callbacks.length; i++) {
+        const cb = callbacks[i];
+        const promise = Promise
+            .resolve(cb.callback(node))
+            .then(() => node.executedCallbacks.push(cb));
+        promises.push(promise)
+    }
+    await Promise.all(promises);
+}
+
 function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<Callback>): WalkNode[] {
 
     if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
@@ -76,7 +89,11 @@ async function processAsync(node: WalkNode, mode: 'breadth' | 'depth', ctx: Cont
     if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
         return []
 
-    await execCallbacksAsync(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
+    const asyncExecutor = ctx.config.parallelizeAsyncCallbacks
+        ? execCallbacksAsyncInParallel
+        : execCallbacksAsync;
+
+    await asyncExecutor(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
 
     const queue: WalkNode[] = []
     const traverse = mode === 'breadth'
@@ -87,7 +104,7 @@ async function processAsync(node: WalkNode, mode: 'breadth' | 'depth', ctx: Cont
     for (let i = 0; i < children.length; i++)
         await traverse(children[i])
 
-    await execCallbacksAsync(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
+    await asyncExecutor(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
 
     return queue;
 }
