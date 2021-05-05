@@ -166,34 +166,34 @@ the `friends` property. The general form of a callback object is:
 }
 ```
 
-Here are the properties you can define in a calback configuration, most of which act as filters:
+Here are the properties you can define in a callback configuration, most of which act as filters:
 
 - `callback`: the actual function to run. Your callback function will be passed a single argument: a `WalkNode` object (
-  see the Nodes section for more detail). succession. If unspecified, the callback will run `'preWalk'`.
+  see the Nodes section for more detail). succession. If unspecified, the callback will run `'preWalk'`. For async functions, `callback` may alternatively return a `Promise<void>`, in which case it will be awaited.
 - `executionOrder`: an integer value for controlling order of callback operations. Lower values run earlier. If
-  unspecified, the order will default to 0. Remember that callback stacks are grouped by position and property, so the
+  unspecified, the order will default to 0. Callback stacks are grouped by position and property, so the
   sort will only apply to callbacks in the same grouping.
 - `nodeTypeFilters`: an array of node types to run on. Options are `'array'`, `'object'`, and `'value'`. If unspecified,
   the callback will run on any node type.
 - `keyFilters`: an array of key names to run on. The callback will check the key of the property against this list. If unspecified, the callback will run on any key.
 - `positionFilters`: an array of positions in the traversal to run on -- think of this as when it should execute.
   Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed).
-  For properties of container-type `'value'`, these two run in immediate
+  For properties of container-type `'value'`, these two run in immediate succession.
 
-Note that for async functions, `callback` may alternatively return a `Promise<void>`.
+
 
 ### Nodes
 
-`Node` objects represent a single node in the tree, providing metadata about the value, its parents, siblings, and children. Nodes have the following properties:
+`WalkNode` objects represent a single node in the tree, providing metadata about the value, its parents, siblings, and children. Nodes have the following properties:
 
 - `key: string|number`: The key of this property as defined on it's parent. For example, if this callback is running on
-  the `'weight'` property of a `person`, the `key` would be `'weight'`. Note that this will
-  be `undefined` for properties in arrays.
-- `val: any`: The value of the property. To use the above example, the value would be something like `'183'`.
-- `nodeType: NodeType`: The type of node the property is.
+  the `'weight'` property of a `person`, the `key` would be `'weight'`. This will
+  be the numerical index for members in arrays.
+- `val: any`: The value of the property. To use the above example, the value would be something like `183`.
+- `nodeType: NodeType`: The type of node the property is. Possible `NodeType` are `'array' | 'object' | 'value'`.
 - `isRoot: boolean`: A boolean that is set to ```true``` if the property is a root object, otherwise ```false```.
 - `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function wil *not* be in the list.
-- `getPath(pathFormat?: (key: string, isArr: boolean) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
+- `getPath(pathFormat?: (key: string, isArray: boolean) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
   look something like `["friends"][10]["friends"][2]["name"]`, such that
   calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`.
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
