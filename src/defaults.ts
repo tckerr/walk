@@ -10,6 +10,7 @@ export function buildDefaultConfig<T>() : Config<T> {
         rootObjectCallbacks: true,
         runCallbacks: true,
         graphMode: 'finiteTree',
+        parallelizeAsyncCallbacks: false,
         callbacks: []
     }
 }
