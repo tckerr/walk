@@ -119,8 +119,8 @@ const defaultConfig = {
     traversalMode: 'depth',
     rootObjectCallbacks: true,
     runCallbacks: true,
-    monitorPerformance: false,
     graphMode: 'finiteTree',
+    parallelizeAsyncCallbacks: false,
     callbacks: []
 }
 ```
