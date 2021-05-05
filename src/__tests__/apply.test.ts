@@ -8,9 +8,6 @@ test("it runs once per node", () => {
         }
     }
     let count = 0;
-    apply(data, (node: WalkNode) => {
-        count++;
-    })
-
+    apply(data, () => count++)
     expect(count).toEqual(3);
 });

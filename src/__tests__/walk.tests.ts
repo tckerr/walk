@@ -3,6 +3,30 @@ import {Break} from "../utils";
 import {WalkNode} from "../node";
 
 describe("walk", () => {
+    it("ignores root callbacks", () => {
+        const data = {}
+
+        let count = 0;
+        walk(data, {
+            rootObjectCallbacks: false,
+            callbacks: [{callback: (n) => count++}]
+        })
+
+        expect(count).toEqual(0);
+    });
+
+    it("ignores all callbacks", () => {
+        const data = {person:{name:"Bob"}}
+
+        let count = 0;
+        walk(data, {
+            runCallbacks: false,
+            callbacks: [{callback: (n) => count++}]
+        })
+
+        expect(count).toEqual(0);
+    });
+
     it("runs once per node filtered by key", () => {
         const data = {
             person: {
@@ -297,7 +321,6 @@ describe("walk", () => {
 
         let count = 0;
         walk(a, {
-            monitorPerformance: true,
             graphMode: "graph",
             callbacks: [{
                 callback: (n) => {

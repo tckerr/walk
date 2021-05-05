@@ -1,14 +1,12 @@
-import {Callback, Context, NodeType} from "./types";
+import {Callback, NodeType} from "./types";
 import {defaultPathFormat} from "./defaults";
 
-function getNormalizedType(val: any): NodeType {
-    if (Array.isArray(val))
-        return 'array'
-    else if (typeof val === 'object')
-        return 'object'
-    return 'value'
-}
-
+const getNormalizedType = (val: any): NodeType =>
+    Array.isArray(val)
+        ? 'array'
+    : typeof val === 'object'
+        ? 'object'
+        : 'value';
 
 export class WalkNode {
     private _children?: WalkNode[]
@@ -73,8 +71,6 @@ export class WalkNode {
     }
 
     public get siblings(): WalkNode[] {
-        if (!this.parent)
-            return []
-        return this.parent.children.filter((c) => c.id !== this.id)
+        return this.parent?.children.filter((c) => c.id !== this.id) ?? []
     }
 }

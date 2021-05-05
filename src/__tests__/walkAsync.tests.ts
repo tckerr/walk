@@ -305,7 +305,6 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(a, {
-            monitorPerformance: true,
             graphMode: "graph",
             callbacks: [{
                 callback: (n) => {
