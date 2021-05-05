@@ -36,6 +36,7 @@ export type Config<T extends BaseCallback> = {
     readonly graphMode: DataStructureType
     readonly rootObjectCallbacks: boolean
     readonly runCallbacks: boolean
+    readonly parallelizeAsyncCallbacks: boolean
 }
 
 export type PartialConfig<T extends BaseCallback> = {
