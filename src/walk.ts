@@ -52,7 +52,6 @@ async function execCallbacksAsync(callbacks: AsyncCallback[], node: WalkNode): P
     }
 }
 
-
 async function execCallbacksAsyncInParallel(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
     const promises: Promise<any>[] = []
     for (let i = 0; i < callbacks.length; i++) {
@@ -138,7 +137,7 @@ export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallback
     const rootNode = WalkNode.fromRoot(obj)
 
     try {
-        if(context.config.traversalMode === 'depth'){
+        if (context.config.traversalMode === 'depth') {
             await processAsync(rootNode, 'depth', context);
         } else {
             let queue: WalkNode[] = [rootNode];
@@ -158,7 +157,7 @@ export const walk = (obj: object, config: PartialConfig<Callback>): Context<Call
     const rootNode = WalkNode.fromRoot(obj)
 
     try {
-        if(context.config.traversalMode === 'depth'){
+        if (context.config.traversalMode === 'depth') {
             process(rootNode, 'depth', context);
         } else {
             let queue: WalkNode[] = [rootNode];
