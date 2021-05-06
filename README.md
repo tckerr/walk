@@ -6,6 +6,9 @@
     - [Synchronous](#synchronous)
     - [Async](#async)
 4. [Reference](#reference)
+    - [Configuration](#configuration)
+        - [Defaults](#config-defaults)
+        - [Builder](#using-the-builder)
     - [Callbacks](#callbacks)
     - [Nodes](#nodes)
 
@@ -98,33 +101,6 @@ The primary method for traversing an object and injecting callbacks into the tra
 
 Async version of `walk` which returns a promise.
 
-**Config options**:
-
-- `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
-- `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
-- `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
-- `callbacks: Callback[]`: an array of callback objects. See the Callback section for more information.
-- `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are ```depth``` for *depth-first*
-  processing and ```breadth``` for *breadth-first* processing.
-- `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
-  setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once.
-  Graphs will only process object/array references one time. Infinite trees will always continue to process -
-  use ```throw new Break()``` to end the processing manually. *Warning:
-  infinite trees will never complete processing if a callback doesn't ```throw new Break()```.*
-
-The configuration defaults to the following:
-
-```typescript
-const defaultConfig = {
-    traversalMode: 'depth',
-    rootObjectCallbacks: true,
-    runCallbacks: true,
-    graphMode: 'finiteTree',
-    parallelizeAsyncCallbacks: false,
-    callbacks: []
-}
-```
-
 #### `apply(obj: object, ...callbacks: ((node: NodeType) => void)[]): void`:
 
 A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
@@ -146,6 +122,73 @@ Returns a deep copy of an object, with all array and object references replaced 
 
 This method returns all *values* who match within the `object`'s tree. Set the optional parameter `typeConversion`
 to `true` to do a `==` comparison (instead of the default `===`.)
+
+### Configuration:
+
+- `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
+- `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
+- `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
+- `callbacks: Callback[]`: an array of callback objects. See the Callback section for more information.
+- `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are ```depth``` for *depth-first*
+  processing and ```breadth``` for *breadth-first* processing.
+- `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
+  setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once.
+  Graphs will only process object/array references one time. Infinite trees will always continue to process -
+  use ```throw new Break()``` to end the processing manually. *Warning:
+  infinite trees will never complete processing if a callback doesn't ```throw new Break()```.*
+
+#### Config Defaults
+
+```typescript
+const defaultConfig = {
+    traversalMode: 'depth',
+    rootObjectCallbacks: true,
+    runCallbacks: true,
+    graphMode: 'finiteTree',
+    parallelizeAsyncCallbacks: false,
+    callbacks: []
+}
+```
+
+#### Using the builder
+
+An alternative way to configure a walk is to use either the `WalkBuilder` or `AsyncWalkBuilder`.
+
+Call `WalkBuilder.walk(obj: object)` to execute the walk with the builder's configuration. 
+
+
+Example:
+```typescript
+import { WalkBuilder } from 'walkjs';
+
+const logCallback = (node: WalkNode) => console.log(node);
+const myObject = {}
+
+const result = new WalkBuilder()
+    // runs for every node
+    .withSimpleCallback(logCallback)
+    // configured callback
+    .withCallback({
+        keyFilters: ['myKey'],
+        positionFilters: ['postWalk'],
+        nodeTypeFilters: ['object'],
+        executionOrder: 0,
+        callback: logCallback
+    })
+    // alternative way to configure callbacks
+    .withConfiguredCallback(logCallback)
+        .filteredByKeys('key1', 'key2')
+        .filteredByNodeTypes('object', 'array')
+        .filteredByPositions('postWalk', 'preWalk')
+        .withExecutionOrder(1)
+        .done()
+    .withGraphMode('graph')
+    .withTraversalMode('breadth')
+    .withRunningCallbacks(true)
+    .withRootObjectCallbacks(true)
+    // execute the walk
+    .walk(myObject)
+```
 
 ### Callbacks
 
@@ -179,8 +222,6 @@ Here are the properties you can define in a callback configuration, most of whic
 - `positionFilters`: an array of positions in the traversal to run on -- think of this as when it should execute.
   Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed).
   For properties of container-type `'value'`, these two run in immediate succession.
-
-
 
 ### Nodes
 
