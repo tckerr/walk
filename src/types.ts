@@ -8,45 +8,47 @@ export type Context<T> = {
 }
 
 export type NodeType = 'array' | 'object' | 'value';
-export type DataStructureType = 'finiteTree' | 'tree' | 'graph' | 'infinite';
+export type GraphMode = 'finiteTree' | 'tree' | 'graph' | 'infinite';
 export type PositionType = 'preWalk' | 'postWalk'
+export type TraversalMode = 'depth' | 'breadth';
 
 export interface IOrderable {
-    readonly executionOrder?: number
+    executionOrder?: number
 }
 
 export type Cb = (node: WalkNode) => void;
 export type AsyncCb = Cb | ((node: WalkNode) => Promise<void>);
 
 export type BaseCallback = IOrderable & {
-    readonly executionOrder?: number,
-    readonly positionFilters?: PositionType[]
-    readonly keyFilters?: string[],
-    readonly nodeTypeFilters?: NodeType[]
+    executionOrder?: number,
+    positionFilters?: PositionType[]
+    keyFilters?: string[],
+    nodeTypeFilters?: NodeType[]
 }
 
 export type Callback = BaseCallback & {
-    readonly callback: Cb,
+    callback: Cb,
 }
 
 export type AsyncCallback = BaseCallback & {
-    readonly callback: AsyncCb,
+    callback: AsyncCb,
 }
 
 export type Config<T extends BaseCallback> = {
-    readonly traversalMode: 'depth' | 'breadth'
+    readonly traversalMode: TraversalMode
     readonly callbacks: T[]
-    readonly graphMode: DataStructureType
+    readonly graphMode: GraphMode
     readonly rootObjectCallbacks: boolean
     readonly runCallbacks: boolean
     readonly parallelizeAsyncCallbacks: boolean
 }
 
 export type PartialConfig<T extends BaseCallback> = {
-    readonly traversalMode?: 'depth' | 'breadth'
-    readonly callbacks?: T[]
-    readonly graphMode?: DataStructureType
-    readonly rootObjectCallbacks?: boolean
-    readonly runCallbacks?: boolean
+    traversalMode?: 'depth' | 'breadth'
+    callbacks?: T[]
+    graphMode?: GraphMode
+    rootObjectCallbacks?: boolean
+    runCallbacks?: boolean
+    parallelizeAsyncCallbacks?: boolean
 }
 
