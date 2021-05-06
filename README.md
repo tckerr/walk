@@ -198,7 +198,6 @@ the `friends` property. The general form of a callback object is:
 
 ```
 {   
-    name: 'optional name',
     executionOrder: 0,
     nodeTypeFilters: ['array'],
     keyFilters: ['friends'],
