@@ -1,5 +1,5 @@
 import {walk} from "../index";
-import {Break} from "../utils";
+import {Break} from "../index";
 import {WalkNode} from "../node";
 
 describe("walk", () => {
@@ -38,9 +38,7 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 keyFilters: ['name'],
-                callback: (n) => {
-                    count++
-                }
+                callback: () => count++
             }]
         })
 
@@ -115,7 +113,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                positionFilters: ['preWalk', 'postWalk'],
+                positionFilter: 'both',
                 keyFilters: ['name'],
                 callback: (n) => count++
             }]
@@ -362,11 +360,11 @@ describe("walk", () => {
             traversalMode: "depth",
             callbacks: [
                 {
-                    positionFilters: ["preWalk"],
+                    positionFilter: "preWalk",
                     callback: (n) => preKeys.push(n.getPath())
                 },
                 {
-                    positionFilters: ["postWalk"],
+                    positionFilter: "postWalk",
                     callback: (n) => postKeys.push(n.getPath())
                 }
             ]
@@ -400,10 +398,10 @@ describe("walk", () => {
         walk(data, {
             traversalMode: "breadth",
             callbacks: [{
-                positionFilters: ["preWalk"],
+                positionFilter: "preWalk",
                 callback: (n) => preKeys.push(n.getPath())
             }, {
-                positionFilters: ["postWalk"],
+                positionFilter: "postWalk",
                 callback: (n) => postKeys.push(n.getPath())
             },
 
@@ -425,5 +423,23 @@ describe("walk", () => {
             "[\"people\"][0]",
             "[\"pets\"][0]",
         ])
+    })
+
+    it("only runs callbacks for filtered nodes", () => {
+
+        const data = {
+            people: ['Alice'],
+            pets: ['Fido'],
+        }
+
+        let count = 0;
+        walk(data, {
+            callbacks: [{
+                filters: [(n) => n.val === 'Fido'],
+                callback: () => count++
+            }]
+        })
+
+        expect(count).toEqual(1)
     })
 })

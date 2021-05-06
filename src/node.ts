@@ -1,5 +1,5 @@
-import {Callback, NodeType} from "./types";
-import {defaultPathFormat} from "./defaults";
+import {Callback, NodePathFormatter, NodeType} from "./types";
+import {defaultPathFormatter} from "./defaults";
 
 const getNormalizedType = (val: any): NodeType =>
     Array.isArray(val)
@@ -10,7 +10,7 @@ const getNormalizedType = (val: any): NodeType =>
 
 export class WalkNode {
     private _children?: WalkNode[]
-    private static _idx: number;
+    private static _idx: number = 0;
     public readonly id: number;
 
     constructor(
@@ -22,7 +22,7 @@ export class WalkNode {
         public executedCallbacks: Callback[] = [],
         public keyInParent?: string | number,
         public parent?: WalkNode,) {
-        this.id = ++WalkNode._idx;
+        this.id = WalkNode._idx++;
     }
 
     public static fromRoot(obj: object): WalkNode {
@@ -46,28 +46,29 @@ export class WalkNode {
         )
     }
 
-    public getPath(pathFormat?: (key: string, isArr: boolean) => string): string {
+    public getPath(pathFormat?: NodePathFormatter): string {
         if (this.isRoot)
             return ""
 
-        pathFormat = pathFormat || defaultPathFormat
+        pathFormat = pathFormat || defaultPathFormatter
         return this.parent!.getPath(pathFormat) + pathFormat(this.keyInParent!.toString(), this.isArrayMember)
     }
 
     public get children(): WalkNode[] {
-        if (typeof this._children !== 'undefined')
-            return this._children;
+        if (typeof this._children === 'undefined')
+            this._children = [...this.getChildren()];
 
+        return this._children ?? (this._children = [...this.getChildren()]);
+    }
+
+    public * getChildren(): Generator<WalkNode> {
         if (this.nodeType === 'array')
-            this._children = this.val.map((_: any, idx: number) => WalkNode.fromArrayIndex(this, idx))
+            for (let i = 0; i < this.val.length; i++)
+                yield WalkNode.fromArrayIndex(this, i)
 
-        else if (this.nodeType === 'object')
-            this._children = Object.keys(this.val).map(key => WalkNode.fromObjectKey(this, key))
-
-        else
-            this._children = []
-
-        return this._children!;
+        if (this.nodeType === 'object')
+            for (let key of Object.keys(this.val))
+                yield WalkNode.fromObjectKey(this, key)
     }
 
     public get siblings(): WalkNode[] {

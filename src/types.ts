@@ -2,28 +2,31 @@ import {WalkNode} from "./node";
 
 export type Context<T> = {
     config: Config<T>
-    nodes: any
     seenObjects: any[]
     callbacksByPosition: { [key: string]: BaseCallback[] }
 }
 
 export type NodeType = 'array' | 'object' | 'value';
 export type GraphMode = 'finiteTree' | 'tree' | 'graph' | 'infinite';
-export type PositionType = 'preWalk' | 'postWalk'
+export type PositionType = 'preWalk' | 'postWalk' | 'both'
 export type TraversalMode = 'depth' | 'breadth';
 
 export interface IOrderable {
     executionOrder?: number
 }
 
+export type NodePathFormatter = (node: string, isArr: boolean) => string;
+
 export type Cb = (node: WalkNode) => void;
 export type AsyncCb = Cb | ((node: WalkNode) => Promise<void>);
+export type NodeFilterFn = (node: WalkNode) => boolean;
 
 export type BaseCallback = IOrderable & {
     executionOrder?: number,
-    positionFilters?: PositionType[]
+    positionFilter?: PositionType
     keyFilters?: string[],
-    nodeTypeFilters?: NodeType[]
+    nodeTypeFilters?: NodeType[] | NodeType
+    filters?: NodeFilterFn[] | NodeFilterFn
 }
 
 export type Callback = BaseCallback & {

@@ -1,8 +1,6 @@
-import {Config, Context, PartialConfig} from "./types";
+import {Config, Context, NodePathFormatter, PartialConfig} from "./types";
 
-export const defaultCallbackPosition = 'preWalk'
-
-export const defaultPathFormat = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
+export const defaultPathFormatter: NodePathFormatter = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
 
 export function buildDefaultConfig<T>() : Config<T> {
     return {
@@ -21,8 +19,10 @@ export function buildDefaultContext<T>(config: PartialConfig<T>): Context<T> {
             ...buildDefaultConfig<T>(),
             ...config,
         },
-        nodes: {},
         seenObjects: [],
-        callbacksByPosition: {},
+        callbacksByPosition: {
+            "preWalk": [],
+            "postWalk": []
+        },
     }
 }

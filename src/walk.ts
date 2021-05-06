@@ -1,173 +1,128 @@
-import {AsyncCallback, BaseCallback, Callback, Context, PartialConfig, PositionType} from "./types";
-import {buildDefaultContext, defaultCallbackPosition} from "./defaults";
+import {AsyncCallback, BaseCallback, Callback, Context, PartialConfig} from "./types";
+import {buildDefaultContext} from "./defaults";
 import {executionOrderSort} from "./helpers";
-import {Break} from "./utils";
+import {Break, forceEvalAsyncGenerator, forceEvalGenerator} from "./utils";
 import {WalkNode} from "./node";
+import {execCallbacks, getAsyncExecutor, matchCallbacks} from "./callback";
 
-function matchCallbacks<T extends BaseCallback>(node: WalkNode, position: PositionType, ctx: Context<T>): T[] {
 
-    if (!ctx.config.runCallbacks)
-        return []
+function shouldSkipVisitation(node: WalkNode, ctx: Context<any>): boolean {
+    if (node.nodeType === 'value')
+        return false;
 
-    if (node.isRoot && !ctx.config.rootObjectCallbacks)
-        return [];
-
-    const callbacks = ctx.callbacksByPosition[position];
-    if (typeof callbacks == 'undefined') {
-        return [];
-    }
-
-    return callbacks
-        .map(cb => cb as T)
-        .filter(cb => (cb.nodeTypeFilters?.indexOf(node.nodeType!) ?? 1) !== -1)
-        .filter(cb =>
-            typeof cb.keyFilters === 'undefined'
-            || (typeof node.keyInParent !== 'number' && cb.keyFilters.indexOf(node.keyInParent!) !== -1))
-}
-
-function validateVisitation<T>(node: WalkNode, ctx: Context<T>): boolean {
     const seen = ctx.seenObjects.indexOf(node.val) !== -1;
     if (seen && ctx.config.graphMode === 'graph')
-        return false;
+        return true;
 
     if (seen && ctx.config.graphMode === 'finiteTree')
         throw "The object violates the defined structure. Override 'graphMode' in the config to allow parsing different object structures.";
 
     ctx.seenObjects.push(node.val)
-    return true;
+    return false;
 }
 
-function execCallbacks(callbacks: Callback[], node: WalkNode): void {
-    callbacks.forEach(cb => {
-        cb.callback(node)
-        node.executedCallbacks.push(cb);
-    })
-}
-
-async function execCallbacksAsync(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
-    for (let i = 0; i < callbacks.length; i++) {
-        const cb = callbacks[i];
-        await cb.callback(node)
-        node.executedCallbacks.push(cb);
-    }
-}
-
-async function execCallbacksAsyncInParallel(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
-    const promises: Promise<any>[] = []
-    for (let i = 0; i < callbacks.length; i++) {
-        const cb = callbacks[i];
-        const promise = Promise
-            .resolve(cb.callback(node))
-            .then(() => node.executedCallbacks.push(cb));
-        promises.push(promise)
-    }
-    await Promise.all(promises);
-}
-
-function process(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<Callback>): WalkNode[] {
-
-    if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
-        return []
+function* processNode(node: WalkNode, ctx: Context<Callback>, processChildren: boolean): Generator<WalkNode> {
+    if (shouldSkipVisitation(node, ctx))
+        return
 
     execCallbacks(matchCallbacks<Callback>(node, 'preWalk', ctx), node);
 
-    const queue: WalkNode[] = []
-    const traverse = mode === 'breadth'
-        ? (child: WalkNode) => queue.push(child)
-        : (child: WalkNode) => process(child, 'depth', ctx)
+    yield node;
 
-    node.children.forEach(traverse)
+    if (processChildren)
+        for (let child of node.getChildren())
+            yield* processNode(child, ctx, true)
 
     execCallbacks(matchCallbacks<Callback>(node, 'postWalk', ctx), node);
-
-    return queue;
 }
 
-async function processAsync(node: WalkNode, mode: 'breadth' | 'depth', ctx: Context<AsyncCallback>): Promise<WalkNode[]> {
+async function* processAsync(node: WalkNode, ctx: Context<AsyncCallback>, processChildren: boolean): AsyncGenerator<WalkNode> {
+    if (shouldSkipVisitation(node, ctx))
+        return
 
-    if ((node.nodeType !== 'value') && !validateVisitation(node, ctx))
-        return []
+    const executor = getAsyncExecutor(ctx.config);
+    await executor(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
 
-    const asyncExecutor = ctx.config.parallelizeAsyncCallbacks
-        ? execCallbacksAsyncInParallel
-        : execCallbacksAsync;
+    yield node;
 
-    await asyncExecutor(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
+    if (processChildren)
+        for (let child of node.getChildren())
+            yield* await processAsync(child, ctx, true)
 
-    const queue: WalkNode[] = []
-    const traverse = mode === 'breadth'
-        ? async (child: WalkNode) => Promise.resolve(queue.push(child))
-        : async (child: WalkNode) => await processAsync(child, 'depth', ctx)
-
-    const children = node.children;
-    for (let i = 0; i < children.length; i++)
-        await traverse(children[i])
-
-    await asyncExecutor(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
-
-    return queue;
+    await executor(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
 }
 
 function buildContext<T extends BaseCallback>(config: PartialConfig<T>): Context<T> {
     const ctx: Context<T> = buildDefaultContext<T>(config)
-    ctx.config.callbacks.forEach(cb => {
+    ctx.config.callbacks.forEach((cb: T) => {
         const callback: T = {
             ...cb,
             executionOrder: typeof cb.executionOrder == 'undefined' ? 0 : cb.executionOrder,
-            positionFilters: typeof cb.positionFilters == 'undefined' || cb.positionFilters.length < 1 ? [defaultCallbackPosition] :
-                cb.positionFilters
-
+            positionFilter: cb.positionFilter || "preWalk"
         }
-        callback.positionFilters!.forEach(position => {
-            if (!(position in ctx.callbacksByPosition))
-                ctx.callbacksByPosition[position] = []
-            ctx.callbacksByPosition[position].push(callback);
-        })
+
+        if (callback.positionFilter === "both") {
+            ctx.callbacksByPosition["preWalk"].push(callback)
+            ctx.callbacksByPosition["postWalk"].push(callback)
+        } else if (typeof callback.positionFilter !== 'undefined') {
+            ctx.callbacksByPosition[callback.positionFilter!].push(callback)
+        }
     })
 
-    for (const key in ctx.callbacksByPosition) {
+    for (const key in ctx.callbacksByPosition)
         ctx.callbacksByPosition[key] = ctx.callbacksByPosition[key].sort(executionOrderSort);
-    }
 
     return ctx;
 }
 
-export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallback>): Promise<Context<AsyncCallback>> => {
+export function* walkStep(obj: object, config: PartialConfig<Callback>): Generator<WalkNode> {
     const context = buildContext(config);
     const rootNode = WalkNode.fromRoot(obj)
 
     try {
-        if (context.config.traversalMode === 'depth') {
-            await processAsync(rootNode, 'depth', context);
-        } else {
+        if (context.config.traversalMode === 'depth')
+            yield* processNode(rootNode, context, true)
+        else {
             let queue: WalkNode[] = [rootNode];
-            do queue = queue.concat(await processAsync(queue.shift()!, 'breadth', context));
+            do {
+                const next = queue.shift()!;
+                yield* processNode(next, context, false);
+                queue.push(...next.children)
+            }
             while (queue.length > 0)
         }
     } catch (err) {
         if (!(err instanceof Break))
             throw err;
     }
-
-    return context;
 }
 
-export const walk = (obj: object, config: PartialConfig<Callback>): Context<Callback> => {
+export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCallback>): AsyncGenerator<WalkNode> {
     const context = buildContext(config);
     const rootNode = WalkNode.fromRoot(obj)
 
     try {
         if (context.config.traversalMode === 'depth') {
-            process(rootNode, 'depth', context);
+            yield* await processAsync(rootNode, context, true);
         } else {
             let queue: WalkNode[] = [rootNode];
-            do queue = queue.concat(process(queue.shift()!, 'breadth', context));
+            do {
+                const next = queue.shift()!;
+                yield* await processAsync(next, context, false);
+                queue.push(...next.children)
+            }
             while (queue.length > 0)
         }
     } catch (err) {
         if (!(err instanceof Break))
             throw err;
     }
+}
 
-    return context;
+export const walk = (obj: object, config: PartialConfig<Callback>): void => {
+    forceEvalGenerator(walkStep(obj, config))
+}
+
+export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallback>): Promise<void> => {
+    await forceEvalAsyncGenerator(walkAsyncStep(obj, config))
 }

@@ -96,7 +96,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                positionFilters: ['preWalk', 'postWalk'],
+                positionFilter: 'both',
                 keyFilters: ['name'],
                 callback: (n) => count++
             }]
@@ -350,11 +350,11 @@ describe("walkAsync", () => {
             traversalMode: "depth",
             callbacks: [
                 {
-                    positionFilters: ["preWalk"],
+                    positionFilter: "preWalk",
                     callback: (n) => preKeys.push(n.getPath())
                 },
                 {
-                    positionFilters: ["postWalk"],
+                    positionFilter: "postWalk",
                     callback: (n) => postKeys.push(n.getPath())
                 }
             ]
@@ -388,10 +388,10 @@ describe("walkAsync", () => {
         await walkAsync(data, {
             traversalMode: "breadth",
             callbacks: [{
-                positionFilters: ["preWalk"],
+                positionFilter: "preWalk",
                 callback: (n) => preKeys.push(n.getPath())
             }, {
-                positionFilters: ["postWalk"],
+                positionFilter: "postWalk",
                 callback: (n) => postKeys.push(n.getPath())
             },
 

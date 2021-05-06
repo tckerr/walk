@@ -5,13 +5,13 @@ import {
     Callback,
     Cb,
     Context,
-    GraphMode,
+    GraphMode, NodeFilterFn,
     NodeType,
     PartialConfig,
     PositionType,
     TraversalMode
 } from "./types";
-import {walk} from "./walk";
+import {walk, walkAsync, walkAsyncStep, walkStep} from "./walk";
 import {WalkNode} from "./node";
 
 
@@ -34,6 +34,15 @@ class CallbacksBuilder<
         return this;
     }
 
+    withFilter(fn: NodeFilterFn): this {
+        return this.withFilters(fn)
+    }
+
+    withFilters(...fn: NodeFilterFn[]): this {
+        this.callback.filters = fn;
+        return this;
+    }
+
     filteredByNodeTypes(...types: NodeType[]): CallbacksBuilder<T, CbType, TUpper> {
         this.callback.nodeTypeFilters = types;
         return this;
@@ -44,8 +53,8 @@ class CallbacksBuilder<
         return this;
     }
 
-    filteredByPositions(...positions: PositionType[]): CallbacksBuilder<T, CbType, TUpper> {
-        this.callback.positionFilters = positions;
+    filteredByPosition(position: PositionType): CallbacksBuilder<T, CbType, TUpper> {
+        this.callback.positionFilter = position;
         return this;
     }
 
@@ -114,8 +123,8 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
 }
 
 export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
-    walk(obj: object): Context<Callback> {
-        return walk(obj, this.config)
+    walk(obj: object) {
+        walk(obj, this.config)
     }
 
     withSimpleCallback(callback: Cb): this {
@@ -124,6 +133,10 @@ export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
 
     withSimpleCallbacks(...callbacks: Cb[]): this {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
+    }
+
+    * walkStep(obj: object): Generator<WalkNode> {
+        return walkStep(obj, this.config)
     }
 }
 
@@ -142,31 +155,11 @@ export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
     }
 
-    async walk(obj: object): Promise<Context<AsyncCallback>> {
-        return walk(obj, this.config)
+    async walk(obj: object): Promise<void> {
+        return walkAsync(obj, this.config)
+    }
+
+    async * walkStep(obj: object): AsyncGenerator<WalkNode> {
+        return walkAsyncStep(obj, this.config)
     }
 }
-
-const logCallback = (node: WalkNode) => console.log(node);
-const myObject = {}
-
-new WalkBuilder()
-    .withSimpleCallback(logCallback)
-    .withCallback({
-        keyFilters: ['myKey'],
-        positionFilters: ['postWalk'],
-        nodeTypeFilters: ['object'],
-        executionOrder: 0,
-        callback: logCallback
-    })
-    .withGraphMode('graph')
-    .withTraversalMode('breadth')
-    .withRunningCallbacks(true)
-    .withRootObjectCallbacks(true)
-    .withConfiguredCallback(logCallback)
-        .filteredByKeys('key1', 'key2')
-        .filteredByNodeTypes('object', 'array')
-        .filteredByPositions('postWalk', 'preWalk')
-        .withExecutionOrder(1)
-        .done()
-    .walk(myObject)
