@@ -43,7 +43,7 @@ const obj = {
 }
 
 function printNode(node: WalkNode){
-    console.log("obj" + node.path, "=", node.val)
+    console.log("obj" + node.getPath(), "=", node.val)
 }
 
 new WalkBuilder()
