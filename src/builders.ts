@@ -59,8 +59,13 @@ class CallbacksBuilder<
 abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
     protected config: PartialConfig<T> = {};
 
+    resetConfig(): this {
+        this.config = {}
+        return this;
+    }
+
     withConfig(config: PartialConfig<T>): this {
-        this.config = config;
+        this.config = {...this.config, ...config};
         return this;
     }
 
@@ -101,6 +106,10 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
             this.config.callbacks = []
         this.config.callbacks.push(...callbacks)
         return this;
+    }
+
+    getConfig(): PartialConfig<T>{
+        return this.config;
     }
 }
 
