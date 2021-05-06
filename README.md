@@ -34,47 +34,51 @@ It also provides some convenience functions, such as deep copying objects.
 # Quickstart
 
 ```typescript
-import {walk} from 'walkjs';
+import { WalkBuilder } from 'walkjs';
 
-const exampleObject = {
+const obj = {
     'a': 1,
-    'b': [2, 3, 4],
+    'b': [2, 3],
     'c': {'d': 5}
 }
 
-walk(exampleObject, {
-    callbacks: [
-        {
-            callback: (node) => console.log(node.path, "-->", node.val)
-        }
-    ]
-});
+function printNode(node: WalkNode){
+    console.log("obj" + node.path, "=", node.val)
+}
+
+new WalkBuilder()
+    .withSimpleCallback(printNode)
+    .withFilter(node => node.val !== 1)
+    .walk(obj)
 ```
 
-yields:
+outputs:
 ```javascript
---> { a: 1, b: [ 2, 3 ], c: { d: 4 } }
-["a"] --> 1
-["b"] --> [ 2, 3 ]
-["b"][0] --> 2
-["b"][1] --> 3
-["c"] --> { d: 4 }
-["c"]["d"] --> 4
+obj = { a: 1, b: [ 2, 3 ], c: { d: 4 } }
+obj["b"] = [ 2, 3 ]
+obj["b"][0] = 2
+obj["b"][1] = 3
+obj["c"] = { d: 4 }
+obj["c"]["d"] = 4
 ```
 ## Async
 
 Async walks work almost exactly the same as the sync ones, but have an async signature. Note that all callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
 
 ```typescript
-import {applyAsync, walkAsync} from 'walkjs';
+import {AsyncWalkBuilder} from 'walkjs';
 
-const exampleObject = {
-    'a': 1,
-    'b': [2, 3, 4],
-    'c': {'d': 5}
+const obj = {
+    //...
 }
 
-await apply(exampleObject, async (node) => await someAsyncOperation())
+async function callApi(node: WalkNode): Promise<void> {
+    // do some async work here
+}
+
+await new AsyncWalkBuilder()
+    .withSimpleCallback(callApi)
+    .walk(exampleObject)
 ```
 
 See the reference for more details!
@@ -83,7 +87,7 @@ See the reference for more details!
 
 #### `walk(obj: object, config: Config<Callback>): void`
 
-The primary method for traversing an object and injecting callbacks into the traversal.
+The primary method for traversing an object and injecting callbacks into the traversal. 
 
 #### `walkAsync(obj: object, config: Config<AsyncCallback>): Promise<void>`
 
