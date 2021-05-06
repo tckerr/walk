@@ -2,15 +2,21 @@
 
 1. [Description](#description)
 2. [Installation](#installation)
-3. [Usage](#usage)
-    - [Synchronous](#synchronous)
+3. [Quickstart](#quickstart)
     - [Async](#async)
 4. [Reference](#reference)
+    - [Halting the walk](#halting-the-walk)
+    - [Extra functions](#extra-functions)
+        - [Apply](#apply)
+        - [Deep copy](#deep-copy)
+        - [Compare](#compare)
+        - [Find](#find)
     - [Configuration](#configuration)
         - [Defaults](#config-defaults)
         - [Builder](#using-the-builder)
     - [Callbacks](#callbacks)
     - [Nodes](#nodes)
+5. [Running walk as a generator](#running-walk-as-a-generator)
 
 # Description
 
@@ -25,37 +31,9 @@ It also provides some convenience functions, such as deep copying objects.
 
 `npm install walkjs --save`
 
-# Usage
-
-## Synchronous
+# Quickstart
 
 ```typescript
-import {apply} from 'walkjs';
-
-const exampleObject = {
-    'a': 1,
-    'b': [2, 3, 4],
-    'c': {'d': 5}
-}
-
-apply(exampleObject, (node) => console.log(node.path, "-->", node.val))
-```
-
-yields:
-```text
---> { a: 1, b: [ 2, 3, 4 ], c: { d: 5 } }
-["a"] --> 1
-["b"] --> [ 2, 3, 4 ]
-["b"][0] --> 2
-["b"][1] -->  3
-["b"][2] -->  4
-["c"] --> { d: 5 }
-["c"] --> ["d"]
-```
-
-`apply` is a shorthand version of the full `walk` API. The verbose way to do this is:
-
-```javascript
 import {walk} from 'walkjs';
 
 const exampleObject = {
@@ -64,18 +42,28 @@ const exampleObject = {
     'c': {'d': 5}
 }
 
-const config = {
-    callbacks: [{
-        callback: (node) => console.log(node.path, "-->", node.val)
-    }]
-}
-
-walk(exampleObject, config);
+walk(exampleObject, {
+    callbacks: [
+        {
+            callback: (node) => console.log(node.path, "-->", node.val)
+        }
+    ]
+});
 ```
 
+yields:
+```javascript
+--> { a: 1, b: [ 2, 3 ], c: { d: 4 } }
+["a"] --> 1
+["b"] --> [ 2, 3 ]
+["b"][0] --> 2
+["b"][1] --> 3
+["c"] --> { d: 4 }
+["c"]["d"] --> 4
+```
 ## Async
 
-Works almost exactly the same as the sync version, but has an async signature. Note that all callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
+Async walks work almost exactly the same as the sync ones, but have an async signature. Note that all callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
 
 ```typescript
 import {applyAsync, walkAsync} from 'walkjs';
@@ -101,24 +89,75 @@ The primary method for traversing an object and injecting callbacks into the tra
 
 Async version of `walk` which returns a promise.
 
-#### `apply(obj: object, ...callbacks: ((node: NodeType) => void)[]): void`:
+### Halting the walk
+
+```typescript
+import {apply, Break} from "walkjs";
+
+// the walk will not process for any nodes after this
+apply({}, () => throw new Break())
+
+```
+
+Throwing an instance of this class within a callback will halt processing completely. This allows for early exit, usually for circular graphs or in cases when you no longer need to continue.
+
+### Extra functions
+
+Walk has some extra utility functions built-in that you may find useful.
+
+#### Apply
+
+
+```typescript
+apply(
+    obj: object, 
+    ...callbacks: ((node: NodeType) => void)[]
+): void
+    
+applyAsync(
+    obj: object, 
+    ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
+): Promise<void>
+```
 
 A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
 
-#### `applyAsync(obj: object, ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]): Promise<void>`:
+#### Deep copy
 
-Async version of `apply` which returns a promise.
-
-#### `Break`:
-
-Throwing an instance of this class within a callback will halt processing completely. This allows for early access, and
-limited processing of infinite trees.
-
-#### `deepCopy(obj: object)`:
+```typescript
+deepCopy(obj: object) : object
+```
 
 Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
 
-#### `find(obj: object, value: any[, typeConversion: boolean])`:
+#### Compare
+
+```typescript
+compare(
+    a: object, 
+    b: object, 
+    leavesOnly=false, 
+    formatter: NodePathFormatter=defaultFormatter
+): NodeComparison
+```
+
+This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
+
+```typescript
+type NodeComparison = {
+    path: string,
+    a?: any
+    b?: any
+    hasDifference: boolean,
+    difference?: 'added' | 'removed' | {before: any, after: any}
+}
+```
+
+#### Find
+
+```typescript
+find(obj: object, value: any, typeConversion: boolean=false)
+```
 
 This method returns all *values* who match within the `object`'s tree. Set the optional parameter `typeConversion`
 to `true` to do a `==` comparison (instead of the default `===`.)
@@ -170,7 +209,7 @@ const result = new WalkBuilder()
     // configured callback
     .withCallback({
         keyFilters: ['myKey'],
-        positionFilters: ['postWalk'],
+        positionFilter: 'postWalk',
         nodeTypeFilters: ['object'],
         executionOrder: 0,
         callback: logCallback
@@ -179,7 +218,8 @@ const result = new WalkBuilder()
     .withConfiguredCallback(logCallback)
         .filteredByKeys('key1', 'key2')
         .filteredByNodeTypes('object', 'array')
-        .filteredByPositions('postWalk', 'preWalk')
+        .filteredByPosition('postWalk')
+        .withFilter(node => !!node.parent)
         .withExecutionOrder(1)
         .done()
     .withGraphMode('graph')
@@ -201,7 +241,7 @@ the `friends` property. The general form of a callback object is:
     executionOrder: 0,
     nodeTypeFilters: ['array'],
     keyFilters: ['friends'],
-    positionFilters: ['preWalk'],
+    positionFilter: 'preWalk',
     callback: function(node: NodeType){
         // do things here
     }
@@ -210,16 +250,17 @@ the `friends` property. The general form of a callback object is:
 
 Here are the properties you can define in a callback configuration, most of which act as filters:
 
-- `callback`: the actual function to run. Your callback function will be passed a single argument: a `WalkNode` object (
+- `callback: (node: WalkNode) => void`: the actual function to run. Your callback function will be passed a single argument: a `WalkNode` object (
   see the Nodes section for more detail). succession. If unspecified, the callback will run `'preWalk'`. For async functions, `callback` may alternatively return a `Promise<void>`, in which case it will be awaited.
-- `executionOrder`: an integer value for controlling order of callback operations. Lower values run earlier. If
+- `executionOrder: number`: an integer value for controlling order of callback operations. Lower values run earlier. If
   unspecified, the order will default to 0. Callback stacks are grouped by position and property, so the
   sort will only apply to callbacks in the same grouping.
-- `nodeTypeFilters`: an array of node types to run on. Options are `'array'`, `'object'`, and `'value'`. If unspecified,
+- `filters: ((node: WalkNode) => boolean)[]`: A list of functions which will exclude nodes when the result of the function for that node is `false`.
+- `nodeTypeFilters: NodeType[]`: an array of node types to run on. Options are `'array'`, `'object'`, and `'value'`. If unspecified,
   the callback will run on any node type.
-- `keyFilters`: an array of key names to run on. The callback will check the key of the property against this list. If unspecified, the callback will run on any key.
-- `positionFilters`: an array of positions in the traversal to run on -- think of this as when it should execute.
-  Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed).
+- `keyFilters: string[]`: an array of key names to run on. The callback will check the key of the property against this list. If unspecified, the callback will run on any key.
+- `positionFilter: PositionType`: The position the traversal to run on -- think of this as when it should execute.
+  Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed). You may also supply `'both'`.
   For properties of container-type `'value'`, these two run in immediate succession.
 
 ### Nodes
@@ -239,3 +280,24 @@ Here are the properties you can define in a callback configuration, most of whic
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
 - `children: WalkNode[]`: A list of all child nodes.
 - `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).
+
+# Running walk as a generator
+
+Behind the scenes, `walk` and `walkAsync` run as generators (`Generator<WalkNode>` and `AsyncGenerator<WalkNode>`, respectively). As they step through the object graph, nodes are yielded. 
+
+The default `walk`/`walkAsync` functions coerce the generator to a list before returning. However you can access the generator directly, simple use the following imports instead:
+
+```typescript
+import {walkStep, walkAsyncStep} from "walkjs";
+
+// sync
+for (const node of walkStep(obj, config))
+    console.log(node);
+
+// async
+for await (const node of walkAsyncStep(obj, config))
+    console.log(node)
+
+```
+
+Note that `preWalk` callbacks are invoked prior to yielding a node, and `postWalk` callbacks after.
