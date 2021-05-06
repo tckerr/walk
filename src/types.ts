@@ -44,7 +44,7 @@ export type Config<T extends BaseCallback> = {
 }
 
 export type PartialConfig<T extends BaseCallback> = {
-    traversalMode?: 'depth' | 'breadth'
+    traversalMode?: TraversalMode
     callbacks?: T[]
     graphMode?: GraphMode
     rootObjectCallbacks?: boolean
