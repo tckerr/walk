@@ -15,18 +15,19 @@ import {walk, walkAsync, walkAsyncStep, walkStep} from "./walk";
 import {WalkNode} from "./node";
 
 
-class CallbacksBuilder<
-    T extends BaseCallback,
+class CallbacksBuilder<T extends BaseCallback,
     CbType extends Cb,
-    TUpper extends BaseWalkBuilder<T, CbType>
-> {
+    TUpper extends BaseWalkBuilder<T, CbType>> {
     private readonly callback: T;
 
     constructor(
         private cbs: CbType[],
         private source: TUpper
     ) {
-        this.callback = {callback: () => {}} as unknown as T
+        this.callback = {
+            callback: () => {
+            }
+        } as unknown as T
     }
 
     withExecutionOrder(order: number): CallbacksBuilder<T, CbType, TUpper> {
@@ -110,6 +111,17 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
         return this.withCallbacks(callback)
     }
 
+    withFilter(fn: NodeFilterFn): this {
+        this.config.callbacks?.forEach(cb => {
+            if (!cb.filters)
+                cb.filters = []
+            else if (!Array.isArray(cb.filters))
+                cb.filters = [cb.filters]
+            cb.filters.push(fn)
+        })
+        return this;
+    }
+
     withCallbacks(...callbacks: T[]): this {
         if (!this.config.callbacks)
             this.config.callbacks = []
@@ -117,7 +129,7 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
         return this;
     }
 
-    getConfig(): PartialConfig<T>{
+    getConfig(): PartialConfig<T> {
         return this.config;
     }
 }
@@ -159,7 +171,7 @@ export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
         return walkAsync(obj, this.config)
     }
 
-    async * walkStep(obj: object): AsyncGenerator<WalkNode> {
+    async* walkStep(obj: object): AsyncGenerator<WalkNode> {
         return walkAsyncStep(obj, this.config)
     }
 }
