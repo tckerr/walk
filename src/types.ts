@@ -2,7 +2,7 @@ import {WalkNode} from "./node";
 
 export type Context<T> = {
     config: Config<T>
-    seenObjects: any[]
+    seenObjects: Set<any>
     callbacksByPosition: { [key: string]: BaseCallback[] }
 }
 

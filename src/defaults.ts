@@ -19,7 +19,7 @@ export function buildDefaultContext<T>(config: PartialConfig<T>): Context<T> {
             ...buildDefaultConfig<T>(),
             ...config,
         },
-        seenObjects: [],
+        seenObjects: new Set<any>(),
         callbacksByPosition: {
             "preWalk": [],
             "postWalk": []

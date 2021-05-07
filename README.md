@@ -20,18 +20,23 @@
 
 # Description
 
-Walk is a Javascript library for traversing object trees. The library allows for:
+Walk is a Javascript library for traversing object trees. The library includes:
 
-- Recursive descent into nested objects
-- Type-specific (array/obj/value) preprocess and postprocess callback hooks that get executed during the walk
-
-It also provides some convenience functions, such as deep copying objects.
+- Functions for recursive processing of nested object trees and directed graphs
+- User defined, type-specific (array/obj/value) callback hooks that get executed during the traversal
+- Support for asynchronous callbacks, run either in sequence or in parallel
+- Incremental graph traversal through generators, with full async support
+- A variety of convenience functions, which double as implementation examples for the library
 
 # Installation
 
 `npm install walkjs --save`
 
 # Quickstart
+
+Below is a simple example of usage, in which we execute a single callback for each node in the object graph. The 
+callback simply prints metadata about the node. We also add a global filter to exclude any nodes whose value is equal
+to `1`.
 
 ```typescript
 import { WalkBuilder } from 'walkjs';
@@ -48,7 +53,7 @@ function printNode(node: WalkNode){
 
 new WalkBuilder()
     .withSimpleCallback(printNode)
-    .withFilter(node => node.val !== 1)
+    .withGlobalFilter(node => node.val !== 1)
     .walk(obj)
 ```
 
@@ -171,14 +176,12 @@ to `true` to do a `==` comparison (instead of the default `===`.)
 - `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
 - `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
 - `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
-- `callbacks: Callback[]`: an array of callback objects. See the Callback section for more information.
-- `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are ```depth``` for *depth-first*
-  processing and ```breadth``` for *breadth-first* processing.
+- `callbacks: Callback[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
+- `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
+  processing and `breadth` for *breadth-first* processing.
 - `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
-  setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once.
-  Graphs will only process object/array references one time. Infinite trees will always continue to process -
-  use ```throw new Break()``` to end the processing manually. *Warning:
-  infinite trees will never complete processing if a callback doesn't ```throw new Break()```.*
+  setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once, determined by set membership of the WalkNode's `val`. Graphs will only process object/array references one time. Infinite trees will always process nodes -- use `throw new Break()` to end the processing manually. *Warning:
+  infinite trees will never complete processing if a callback doesn't `throw new Break()`.*
 
 #### Config Defaults
 
