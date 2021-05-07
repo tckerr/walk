@@ -1,10 +1,7 @@
 import {
-    AsyncCallback,
     AsyncCallbackFn,
-    BaseCallback,
     Callback,
     CallbackFn,
-    Context,
     GraphMode, NodeFilterFn,
     NodeType,
     PartialConfig,
@@ -15,22 +12,19 @@ import {walk, walkAsync, walkAsyncStep, walkStep} from "./walk";
 import {WalkNode} from "./node";
 
 
-class CallbacksBuilder<T extends BaseCallback,
-    CbType extends CallbackFn,
-    TUpper extends BaseWalkBuilder<T, CbType>> {
-    private readonly callback: T;
+class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> {
+    private readonly callback: Callback<T>;
 
     constructor(
-        private cbs: CbType[],
+        private cbs: T[],
         private source: TUpper
     ) {
         this.callback = {
-            callback: () => {
-            }
-        } as unknown as T
+            callback: ((() => {}) as unknown as T)
+        }
     }
 
-    withExecutionOrder(order: number): CallbacksBuilder<T, CbType, TUpper> {
+    withExecutionOrder(order: number): CallbacksBuilder<T, TUpper> {
         this.callback.executionOrder = order;
         return this;
     }
@@ -44,29 +38,32 @@ class CallbacksBuilder<T extends BaseCallback,
         return this;
     }
 
-    filteredByNodeTypes(...types: NodeType[]): CallbacksBuilder<T, CbType, TUpper> {
+    filteredByNodeTypes(...types: NodeType[]): CallbacksBuilder<T, TUpper> {
         this.callback.nodeTypeFilters = types;
         return this;
     }
 
-    filteredByKeys(...keys: string[]): CallbacksBuilder<T, CbType, TUpper> {
+    filteredByKeys(...keys: string[]): CallbacksBuilder<T, TUpper> {
         this.callback.keyFilters = keys;
         return this;
     }
 
-    filteredByPosition(position: PositionType): CallbacksBuilder<T, CbType, TUpper> {
+    filteredByPosition(position: PositionType): CallbacksBuilder<T, TUpper> {
         this.callback.positionFilter = position;
         return this;
     }
 
     done(): TUpper {
         return this.source.withCallbacks(
-            ...this.cbs.map(cb => ({...this.callback, callback: cb}))
+            ...this.cbs.map(cb => ({
+                ...this.callback,
+                callback: cb
+            }))
         )
     }
 }
 
-abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends CallbackFn> {
+abstract class BaseWalkBuilder<T extends CallbackFn> {
     protected _config: PartialConfig<T> = {};
     private globalFilters: NodeFilterFn[] = []
 
@@ -100,15 +97,15 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends CallbackFn
         return this;
     }
 
-    withConfiguredCallbacks(...callbacks: CbType[]): CallbacksBuilder<T, CbType, this> {
+    withConfiguredCallbacks(...callbacks: T[]): CallbacksBuilder<T, this> {
         return new CallbacksBuilder(callbacks, this)
     }
 
-    withConfiguredCallback(callback: CbType): CallbacksBuilder<T, CbType, this> {
+    withConfiguredCallback(callback: T): CallbacksBuilder<T, this> {
         return this.withConfiguredCallbacks(callback)
     }
 
-    withCallback(callback: T): this {
+    withCallback(callback: Callback<T>): this {
         return this.withCallbacks(callback)
     }
 
@@ -117,7 +114,7 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends CallbackFn
         return this;
     }
 
-    withCallbacks(...callbacks: T[]): this {
+    withCallbacks(...callbacks: Callback<T>[]): this {
         if (!this._config.callbacks)
             this._config.callbacks = []
         this._config.callbacks.push(...callbacks)
@@ -141,7 +138,7 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends CallbackFn
     }
 }
 
-export class WalkBuilder extends BaseWalkBuilder<Callback, CallbackFn> {
+export class WalkBuilder extends BaseWalkBuilder<CallbackFn> {
     walk(obj: object) {
         walk(obj, this.getCurrentConfig())
     }
@@ -159,7 +156,7 @@ export class WalkBuilder extends BaseWalkBuilder<Callback, CallbackFn> {
     }
 }
 
-export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCallbackFn> {
+export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallbackFn> {
 
     async walk(obj: object): Promise<void> {
         return walkAsync(obj, this.getCurrentConfig())

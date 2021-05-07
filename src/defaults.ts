@@ -1,8 +1,8 @@
-import {Config, Context, NodePathFormatter, PartialConfig} from "./types";
+import {CallbackFn, Config, Context, NodePathFormatter, PartialConfig} from "./types";
 
 export const defaultPathFormatter: NodePathFormatter = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
 
-export function buildDefaultConfig<T>() : Config<T> {
+export function buildDefaultConfig<T extends CallbackFn>() : Config<T> {
     return {
         traversalMode: 'depth',
         rootObjectCallbacks: true,
@@ -13,7 +13,7 @@ export function buildDefaultConfig<T>() : Config<T> {
     }
 }
 
-export function buildDefaultContext<T>(config: PartialConfig<T>): Context<T> {
+export function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
     return {
         config: {
             ...buildDefaultConfig<T>(),

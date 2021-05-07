@@ -1,7 +1,7 @@
-import {AsyncCallback, BaseCallback, Callback, Config, Context, PositionType} from "./types";
+import {AsyncCallbackFn, Callback, CallbackFn, Config, Context, PositionType} from "./types";
 import {WalkNode} from "./node";
 
-function filterByFilters<T extends BaseCallback>(cb: T, node: WalkNode) {
+function filterByFilters<T extends CallbackFn>(cb: Callback<T>, node: WalkNode) {
     if (typeof cb.filters === 'undefined' || (Array.isArray(cb.filters) && cb.filters.length === 0))
         return true
 
@@ -10,7 +10,7 @@ function filterByFilters<T extends BaseCallback>(cb: T, node: WalkNode) {
         : cb.filters(node)
 }
 
-function filterByNodeType<T extends BaseCallback>(cb: T, node: WalkNode) {
+function filterByNodeType<T extends CallbackFn>(cb: Callback<T>, node: WalkNode) {
     if (!cb.nodeTypeFilters || (Array.isArray(cb.nodeTypeFilters) && cb.nodeTypeFilters.length === 0))
         return true
 
@@ -19,7 +19,7 @@ function filterByNodeType<T extends BaseCallback>(cb: T, node: WalkNode) {
         : cb.nodeTypeFilters === node.nodeType;
 }
 
-function filterByKey<T extends BaseCallback>(cb: T, node: WalkNode) {
+function filterByKey<T extends CallbackFn>(cb: Callback<T>, node: WalkNode) {
     if (typeof cb.keyFilters === 'undefined' || (Array.isArray(cb.keyFilters) && cb.keyFilters.length === 0))
         return true;
 
@@ -31,7 +31,7 @@ function filterByKey<T extends BaseCallback>(cb: T, node: WalkNode) {
         : cb.keyFilters === node.keyInParent;
 }
 
-export function matchCallbacks<T extends BaseCallback>(node: WalkNode, position: PositionType, ctx: Context<T>): T[] {
+export function matchCallbacks<T extends CallbackFn>(node: WalkNode, position: PositionType, ctx: Context<T>): Callback<T>[] {
 
     if (!ctx.config.runCallbacks)
         return []
@@ -42,29 +42,29 @@ export function matchCallbacks<T extends BaseCallback>(node: WalkNode, position:
     let callbacks = ctx.callbacksByPosition[position];
 
     return (callbacks || [])
-        .map(cb => cb as T)
+        .map(cb => cb as Callback<T>)
         .filter(cb => filterByFilters(cb, node))
         .filter(cb => filterByNodeType(cb, node))
         .filter(cb => filterByKey(cb, node))
 }
 
-export function execCallbacks(callbacks: Callback[], node: WalkNode): void {
+export function execCallbacks(callbacks: Callback<CallbackFn>[], node: WalkNode): void {
     callbacks.forEach(cb => {
         cb.callback(node)
         node.executedCallbacks.push(cb);
     })
 }
 
-type AsyncExecutor = (callbacks: AsyncCallback[], node: WalkNode) => Promise<void>;
+type AsyncExecutor = (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode) => Promise<void>;
 
-export async function execCallbacksAsync(callbacks: AsyncCallback[], node: WalkNode): Promise<void> {
+export async function execCallbacksAsync(callbacks: Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> {
     for (let cb of callbacks) {
         await cb.callback(node)
         node.executedCallbacks.push(cb);
     }
 }
 
-export const execCallbacksAsyncInParallel = async (callbacks: AsyncCallback[], node: WalkNode): Promise<void> =>
+export const execCallbacksAsyncInParallel = async (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> =>
 {
     await Promise.all(
         callbacks.map(cb =>
@@ -76,7 +76,7 @@ export const execCallbacksAsyncInParallel = async (callbacks: AsyncCallback[], n
     );
 }
 
-export function getAsyncExecutor<T>(config: Config<T>): AsyncExecutor {
+export function getAsyncExecutor<T extends CallbackFn>(config: Config<T>): AsyncExecutor {
     return config.parallelizeAsyncCallbacks
         ? execCallbacksAsyncInParallel
         : execCallbacksAsync;

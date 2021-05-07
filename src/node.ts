@@ -19,7 +19,7 @@ export class WalkNode {
         public isArrayMember: boolean = false,
         public nodeType: NodeType = 'value',
         public rawType: string = 'undefined',
-        public executedCallbacks: Callback[] = [],
+        public executedCallbacks: Callback<any>[] = [],
         public keyInParent?: string | number,
         public parent?: WalkNode,) {
         this.id = WalkNode._idx++;

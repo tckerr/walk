@@ -1,4 +1,4 @@
-import {AsyncCallback, BaseCallback, Callback, Context, PartialConfig} from "./types";
+import {AsyncCallbackFn, Callback, CallbackFn, Context, PartialConfig} from "./types";
 import {buildDefaultContext} from "./defaults";
 import {executionOrderSort} from "./helpers";
 import {Break, forceEvalAsyncGenerator, forceEvalGenerator} from "./utils";
@@ -21,11 +21,11 @@ function shouldSkipVisitation(node: WalkNode, ctx: Context<any>): boolean {
     return false;
 }
 
-function* processNode(node: WalkNode, ctx: Context<Callback>, processChildren: boolean): Generator<WalkNode> {
+function* processNode(node: WalkNode, ctx: Context<CallbackFn>, processChildren: boolean): Generator<WalkNode> {
     if (shouldSkipVisitation(node, ctx))
         return
 
-    execCallbacks(matchCallbacks<Callback>(node, 'preWalk', ctx), node);
+    execCallbacks(matchCallbacks<CallbackFn>(node, 'preWalk', ctx), node);
 
     yield node;
 
@@ -33,15 +33,15 @@ function* processNode(node: WalkNode, ctx: Context<Callback>, processChildren: b
         for (let child of node.getChildren())
             yield* processNode(child, ctx, true)
 
-    execCallbacks(matchCallbacks<Callback>(node, 'postWalk', ctx), node);
+    execCallbacks(matchCallbacks<CallbackFn>(node, 'postWalk', ctx), node);
 }
 
-async function* processAsync(node: WalkNode, ctx: Context<AsyncCallback>, processChildren: boolean): AsyncGenerator<WalkNode> {
+async function* processAsync(node: WalkNode, ctx: Context<AsyncCallbackFn>, processChildren: boolean): AsyncGenerator<WalkNode> {
     if (shouldSkipVisitation(node, ctx))
         return
 
     const executor = getAsyncExecutor(ctx.config);
-    await executor(matchCallbacks<AsyncCallback>(node, 'preWalk', ctx), node);
+    await executor(matchCallbacks<AsyncCallbackFn>(node, 'preWalk', ctx), node);
 
     yield node;
 
@@ -49,13 +49,13 @@ async function* processAsync(node: WalkNode, ctx: Context<AsyncCallback>, proces
         for (let child of node.getChildren())
             yield* await processAsync(child, ctx, true)
 
-    await executor(matchCallbacks<AsyncCallback>(node, 'postWalk', ctx), node);
+    await executor(matchCallbacks<AsyncCallbackFn>(node, 'postWalk', ctx), node);
 }
 
-function buildContext<T extends BaseCallback>(config: PartialConfig<T>): Context<T> {
+function buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
     const ctx: Context<T> = buildDefaultContext<T>(config)
-    ctx.config.callbacks.forEach((cb: T) => {
-        const callback: T = {
+    ctx.config.callbacks.forEach((cb: Callback<T>) => {
+        const callback: Callback<T> = {
             ...cb,
             executionOrder: typeof cb.executionOrder == 'undefined' ? 0 : cb.executionOrder,
             positionFilter: cb.positionFilter || "preWalk"
@@ -75,7 +75,7 @@ function buildContext<T extends BaseCallback>(config: PartialConfig<T>): Context
     return ctx;
 }
 
-export function* walkStep(obj: object, config: PartialConfig<Callback>): Generator<WalkNode> {
+export function* walkStep(obj: object, config: PartialConfig<CallbackFn>): Generator<WalkNode> {
     const context = buildContext(config);
     const rootNode = WalkNode.fromRoot(obj)
 
@@ -97,7 +97,7 @@ export function* walkStep(obj: object, config: PartialConfig<Callback>): Generat
     }
 }
 
-export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCallback>): AsyncGenerator<WalkNode> {
+export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCallbackFn>): AsyncGenerator<WalkNode> {
     const context = buildContext(config);
     const rootNode = WalkNode.fromRoot(obj)
 
@@ -119,10 +119,10 @@ export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCal
     }
 }
 
-export const walk = (obj: object, config: PartialConfig<Callback>): void => {
+export const walk = (obj: object, config: PartialConfig<CallbackFn>): void => {
     forceEvalGenerator(walkStep(obj, config))
 }
 
-export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallback>): Promise<void> => {
+export const walkAsync = async (obj: object, config: PartialConfig<AsyncCallbackFn>): Promise<void> => {
     await forceEvalAsyncGenerator(walkAsyncStep(obj, config))
 }
