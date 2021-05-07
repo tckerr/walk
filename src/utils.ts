@@ -1,7 +1,7 @@
 import {unique, updateObjectViaPathString} from "./helpers";
 import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
-import {AsyncCb, Cb, NodePathFormatter} from "./types";
+import {AsyncCallbackFn, CallbackFn, NodePathFormatter} from "./types";
 
 export function flatten(obj: object, key: string, onlyUnique: boolean) {
     //return array of values that match the key
@@ -17,11 +17,11 @@ export function flatten(obj: object, key: string, onlyUnique: boolean) {
     return onlyUnique ? unique(arr) : arr;
 }
 
-export function apply(obj: object, ...callbacks: Cb[]) {
+export function apply(obj: object, ...callbacks: CallbackFn[]) {
     walk(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export async function applyAsync(obj: object, ...callbacks: AsyncCb[]) {
+export async function applyAsync(obj: object, ...callbacks: AsyncCallbackFn[]) {
     await walkAsync(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 

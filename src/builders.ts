@@ -1,9 +1,9 @@
 import {
     AsyncCallback,
-    AsyncCb,
+    AsyncCallbackFn,
     BaseCallback,
     Callback,
-    Cb,
+    CallbackFn,
     Context,
     GraphMode, NodeFilterFn,
     NodeType,
@@ -16,7 +16,7 @@ import {WalkNode} from "./node";
 
 
 class CallbacksBuilder<T extends BaseCallback,
-    CbType extends Cb,
+    CbType extends CallbackFn,
     TUpper extends BaseWalkBuilder<T, CbType>> {
     private readonly callback: T;
 
@@ -66,7 +66,7 @@ class CallbacksBuilder<T extends BaseCallback,
     }
 }
 
-abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
+abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends CallbackFn> {
     protected _config: PartialConfig<T> = {};
     private globalFilters: NodeFilterFn[] = []
 
@@ -141,7 +141,7 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
     }
 }
 
-export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
+export class WalkBuilder extends BaseWalkBuilder<Callback, CallbackFn> {
     walk(obj: object) {
         walk(obj, this.getCurrentConfig())
     }
@@ -150,16 +150,16 @@ export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
         return walkStep(obj, this.getCurrentConfig())
     }
 
-    withSimpleCallback(callback: Cb): this {
+    withSimpleCallback(callback: CallbackFn): this {
         return this.withSimpleCallbacks(callback)
     }
 
-    withSimpleCallbacks(...callbacks: Cb[]): this {
+    withSimpleCallbacks(...callbacks: CallbackFn[]): this {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
     }
 }
 
-export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
+export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCallbackFn> {
 
     async walk(obj: object): Promise<void> {
         return walkAsync(obj, this.getCurrentConfig())
@@ -174,11 +174,11 @@ export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
         return this;
     }
 
-    withSimpleCallback(callback: AsyncCb): this {
+    withSimpleCallback(callback: AsyncCallbackFn): this {
         return this.withSimpleCallbacks(callback)
     }
 
-    withSimpleCallbacks(...callbacks: AsyncCb[]): this {
+    withSimpleCallbacks(...callbacks: AsyncCallbackFn[]): this {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
     }
 }

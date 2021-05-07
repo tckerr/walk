@@ -1,18 +1,17 @@
 import {IOrderable} from "./types";
 
 export function executionOrderSort<T extends IOrderable>(a: T, b: T) {
-    const x = a.executionOrder || 0;
-    const y = b.executionOrder || 0;
-    return ((x < y) ? -1 : ((x > y) ? 1 : 0));
+    const _a = a.executionOrder || 0;
+    const _b = b.executionOrder || 0;
+    return _a < _b ? -1 : _a > _b ? 1 : 0;
 }
 
 export function unique(arr: any[]) {
-    const within: { [key: string]: any } = {};
-    return arr.filter((x: any) => {
-        if (within[x])
-            return;
-        within[x] = true;
-        return x;
+    const seen = new Set<any>();
+    return arr.filter((val: any) => {
+        if (seen.has(val)) return;
+        seen.add(val)
+        return val;
     });
 }
 
