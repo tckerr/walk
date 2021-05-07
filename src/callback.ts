@@ -49,10 +49,10 @@ export function matchCallbacks<T extends CallbackFn>(node: WalkNode, position: P
 }
 
 export function execCallbacks(callbacks: Callback<CallbackFn>[], node: WalkNode): void {
-    callbacks.forEach(cb => {
+    for (let cb of callbacks) {
         cb.callback(node)
         node.executedCallbacks.push(cb);
-    })
+    }
 }
 
 type AsyncExecutor = (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode) => Promise<void>;
@@ -64,8 +64,7 @@ export async function execCallbacksAsync(callbacks: Callback<AsyncCallbackFn>[],
     }
 }
 
-export const execCallbacksAsyncInParallel = async (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> =>
-{
+export const execCallbacksAsyncInParallel = async (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> => {
     await Promise.all(
         callbacks.map(cb =>
             Promise.resolve(cb.callback(node))
