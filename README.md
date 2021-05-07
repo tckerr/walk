@@ -176,7 +176,7 @@ to `true` to do a `==` comparison (instead of the default `===`.)
 - `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
 - `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
 - `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
-- `callbacks: Callback[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
+- `callbacks: Callback<T>[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
 - `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
   processing and `breadth` for *breadth-first* processing.
 - `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
