@@ -1,6 +1,6 @@
 import {AsyncCallbackFn, Callback, CallbackFn, Context, PartialConfig} from "./types";
 import {buildDefaultContext} from "./defaults";
-import {executionOrderSort} from "./helpers";
+import {CallbackStacker, executionOrderSort} from "./helpers";
 import {Break, forceEvalAsyncGenerator, forceEvalGenerator} from "./utils";
 import {WalkNode} from "./node";
 import {execCallbacks, getAsyncExecutor, matchCallbacks} from "./callback";
@@ -20,39 +20,8 @@ function shouldSkipVisitation(node: WalkNode, ctx: Context<any>): boolean {
     return false;
 }
 
-function* processNode(node: WalkNode, ctx: Context<CallbackFn>, processChildren: boolean): Generator<WalkNode> {
-    if (shouldSkipVisitation(node, ctx))
-        return
-
-    execCallbacks(matchCallbacks<CallbackFn>(node, 'preWalk', ctx), node);
-
-    yield node;
-
-    if (processChildren)
-        for (let child of node.getChildren())
-            yield* processNode(child, ctx, true)
-
-    execCallbacks(matchCallbacks<CallbackFn>(node, 'postWalk', ctx), node);
-}
-
-async function* processAsync(node: WalkNode, ctx: Context<AsyncCallbackFn>, processChildren: boolean): AsyncGenerator<WalkNode> {
-    if (shouldSkipVisitation(node, ctx))
-        return
-
-    const executor = getAsyncExecutor(ctx.config);
-    await executor(matchCallbacks<AsyncCallbackFn>(node, 'preWalk', ctx), node);
-
-    yield node;
-
-    if (processChildren)
-        for (let child of node.getChildren())
-            yield* await processAsync(child, ctx, true)
-
-    await executor(matchCallbacks<AsyncCallbackFn>(node, 'postWalk', ctx), node);
-}
-
 function buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
-    const ctx: Context<T> = buildDefaultContext<T>(config)
+    const ctx = buildDefaultContext<T>(config)
     ctx.config.callbacks.forEach((cb: Callback<T>) => {
         const callback: Callback<T> = {
             ...cb,
@@ -74,22 +43,42 @@ function buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T
     return ctx;
 }
 
+
 export function* walkStep(obj: object, config: PartialConfig<CallbackFn>): Generator<WalkNode> {
-    const context = buildContext(config);
-    const rootNode = WalkNode.fromRoot(obj)
+    const ctx = buildContext(config);
+    const depth = ctx.config.traversalMode === 'depth';
+    const queue: WalkNode[] = [WalkNode.fromRoot(obj)];
+    const pusher = depth
+        ? (nodes: WalkNode[]) => queue.unshift(...nodes)
+        : (nodes: WalkNode[]) => queue.push(...nodes)
+
+    const stacker = new CallbackStacker<CallbackFn, void>(execCallbacks)
 
     try {
-        if (context.config.traversalMode === 'depth')
-            yield* processNode(rootNode, context, true)
-        else {
-            let queue: WalkNode[] = [rootNode];
-            do {
-                const next = queue.shift()!;
-                yield* processNode(next, context, false);
-                queue.push(...next.children)
+        do {
+            const node = queue.shift()!
+            if (shouldSkipVisitation(node, ctx))
+                continue
+
+            const children = node.children;
+            pusher(children)
+
+            const beforeCbs = matchCallbacks<CallbackFn>(node, 'preWalk', ctx);
+            stacker.executeOne(node, beforeCbs);
+
+            yield node;
+
+            const afterCbs = matchCallbacks<CallbackFn>(node, 'postWalk', ctx);
+
+            if(depth && children.length){
+                const lastChild = children[children.length - 1];
+                stacker.push(lastChild.id, node, afterCbs)
+            } else {
+                stacker.executeOne(node, afterCbs);
+                forceEvalGenerator(stacker.execute(node.id))
             }
-            while (queue.length > 0)
-        }
+
+        } while (queue.length > 0)
     } catch (err) {
         if (!(err instanceof Break))
             throw err;
@@ -97,21 +86,41 @@ export function* walkStep(obj: object, config: PartialConfig<CallbackFn>): Gener
 }
 
 export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCallbackFn>): AsyncGenerator<WalkNode> {
-    const context = buildContext(config);
-    const rootNode = WalkNode.fromRoot(obj)
+    const ctx = buildContext(config);
+    const depth = ctx.config.traversalMode === 'depth';
+    const queue: WalkNode[] = [WalkNode.fromRoot(obj)];
+    const pusher = depth
+        ? (nodes: WalkNode[]) => queue.unshift(...nodes)
+        : (nodes: WalkNode[]) => queue.push(...nodes)
+    const executor = getAsyncExecutor(ctx.config);
+    const stacker = new CallbackStacker<AsyncCallbackFn, Promise<void> | void>(executor)
 
     try {
-        if (context.config.traversalMode === 'depth') {
-            yield* await processAsync(rootNode, context, true);
-        } else {
-            let queue: WalkNode[] = [rootNode];
-            do {
-                const next = queue.shift()!;
-                yield* await processAsync(next, context, false);
-                queue.push(...next.children)
+        do {
+            const node = queue.shift()!
+            if (shouldSkipVisitation(node, ctx))
+                continue
+
+            const children = node.children;
+            pusher(children)
+
+            const beforeCbs = matchCallbacks<AsyncCallbackFn>(node, 'preWalk', ctx);
+            await stacker.executeOne(node, beforeCbs);
+
+            yield node;
+
+            const afterCbs = matchCallbacks<AsyncCallbackFn>(node, 'postWalk', ctx);
+
+            if(depth && children.length){
+                const lastChild = children[children.length - 1];
+                stacker.push(lastChild.id, node, afterCbs)
+            } else {
+                await stacker.executeOne(node, afterCbs)
+                for (const promise of stacker.execute(node.id))
+                    await promise
             }
-            while (queue.length > 0)
-        }
+
+        } while (queue.length > 0)
     } catch (err) {
         if (!(err instanceof Break))
             throw err;
