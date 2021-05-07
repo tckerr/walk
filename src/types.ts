@@ -16,9 +16,8 @@ export interface IOrderable {
 }
 
 export type NodePathFormatter = (node: string, isArr: boolean) => string;
-
-export type Cb = (node: WalkNode) => void;
-export type AsyncCb = Cb | ((node: WalkNode) => Promise<void>);
+export type CallbackFn = (node: WalkNode) => void;
+export type AsyncCallbackFn = CallbackFn | ((node: WalkNode) => Promise<void>);
 export type NodeFilterFn = (node: WalkNode) => boolean;
 
 export type BaseCallback = IOrderable & {
@@ -30,11 +29,11 @@ export type BaseCallback = IOrderable & {
 }
 
 export type Callback = BaseCallback & {
-    callback: Cb,
+    callback: CallbackFn,
 }
 
 export type AsyncCallback = BaseCallback & {
-    callback: AsyncCb,
+    callback: AsyncCallbackFn,
 }
 
 export type Config<T extends BaseCallback> = {
