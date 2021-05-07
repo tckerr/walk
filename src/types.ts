@@ -1,9 +1,9 @@
 import {WalkNode} from "./node";
 
-export type Context<T> = {
+export type Context<T extends CallbackFn> = {
     config: Config<T>
     seenObjects: Set<any>
-    callbacksByPosition: { [key: string]: BaseCallback[] }
+    callbacksByPosition: { [key: string]: Callback<T>[] }
 }
 
 export type NodeType = 'array' | 'object' | 'value';
@@ -20,34 +20,27 @@ export type CallbackFn = (node: WalkNode) => void;
 export type AsyncCallbackFn = CallbackFn | ((node: WalkNode) => Promise<void>);
 export type NodeFilterFn = (node: WalkNode) => boolean;
 
-export type BaseCallback = IOrderable & {
+export type Callback<T extends CallbackFn> = IOrderable & {
     executionOrder?: number,
     positionFilter?: PositionType
     keyFilters?: string[],
     nodeTypeFilters?: NodeType[] | NodeType
     filters?: NodeFilterFn[] | NodeFilterFn
+    callback: T
 }
 
-export type Callback = BaseCallback & {
-    callback: CallbackFn,
-}
-
-export type AsyncCallback = BaseCallback & {
-    callback: AsyncCallbackFn,
-}
-
-export type Config<T extends BaseCallback> = {
+export type Config<T extends CallbackFn> = {
     readonly traversalMode: TraversalMode
-    readonly callbacks: T[]
+    readonly callbacks: Callback<T>[]
     readonly graphMode: GraphMode
     readonly rootObjectCallbacks: boolean
     readonly runCallbacks: boolean
     readonly parallelizeAsyncCallbacks: boolean
 }
 
-export type PartialConfig<T extends BaseCallback> = {
+export type PartialConfig<T extends CallbackFn> = {
     traversalMode?: TraversalMode
-    callbacks?: T[]
+    callbacks?: Callback<T>[]
     graphMode?: GraphMode
     rootObjectCallbacks?: boolean
     runCallbacks?: boolean
