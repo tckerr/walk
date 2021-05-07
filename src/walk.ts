@@ -10,14 +10,13 @@ function shouldSkipVisitation(node: WalkNode, ctx: Context<any>): boolean {
     if (node.nodeType === 'value')
         return false;
 
-    const seen = ctx.seenObjects.has(node.val);
-    if (seen && ctx.config.graphMode === 'graph')
-        return true;
-
-    if (seen && ctx.config.graphMode === 'finiteTree')
+    if (!ctx.seenObjects.has(node.val))
+        ctx.seenObjects.add(node.val)
+    else if (ctx.config.graphMode === 'graph')
+        return true
+    else if (ctx.config.graphMode === 'finiteTree')
         throw "The object violates the defined structure. Override 'graphMode' in the config to allow parsing different object structures.";
 
-    ctx.seenObjects.add(node.val)
     return false;
 }
 
