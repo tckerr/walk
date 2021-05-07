@@ -67,35 +67,36 @@ class CallbacksBuilder<T extends BaseCallback,
 }
 
 abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
-    protected config: PartialConfig<T> = {};
+    protected _config: PartialConfig<T> = {};
+    private globalFilters: NodeFilterFn[] = []
 
     resetConfig(): this {
-        this.config = {}
+        this._config = {}
         return this;
     }
 
     withConfig(config: PartialConfig<T>): this {
-        this.config = {...this.config, ...config};
+        this._config = {...this._config, ...config};
         return this;
     }
 
     withTraversalMode(traversalMode: TraversalMode): this {
-        this.config.traversalMode = traversalMode;
+        this._config.traversalMode = traversalMode;
         return this;
     }
 
     withGraphMode(graphMode: GraphMode): this {
-        this.config.graphMode = graphMode;
+        this._config.graphMode = graphMode;
         return this;
     }
 
     withRootObjectCallbacks(val: boolean): this {
-        this.config.rootObjectCallbacks = val;
+        this._config.rootObjectCallbacks = val;
         return this;
     }
 
     withRunningCallbacks(val: boolean): this {
-        this.config.runCallbacks = val;
+        this._config.runCallbacks = val;
         return this;
     }
 
@@ -111,32 +112,42 @@ abstract class BaseWalkBuilder<T extends BaseCallback, CbType extends Cb> {
         return this.withCallbacks(callback)
     }
 
-    withFilter(fn: NodeFilterFn): this {
-        this.config.callbacks?.forEach(cb => {
-            if (!cb.filters)
-                cb.filters = []
-            else if (!Array.isArray(cb.filters))
-                cb.filters = [cb.filters]
-            cb.filters.push(fn)
-        })
+    withGlobalFilter(fn: NodeFilterFn): this {
+        this.globalFilters.push(fn)
         return this;
     }
 
     withCallbacks(...callbacks: T[]): this {
-        if (!this.config.callbacks)
-            this.config.callbacks = []
-        this.config.callbacks.push(...callbacks)
+        if (!this._config.callbacks)
+            this._config.callbacks = []
+        this._config.callbacks.push(...callbacks)
         return this;
     }
 
-    getConfig(): PartialConfig<T> {
-        return this.config;
+    getCurrentConfig(): PartialConfig<T> {
+        return {
+            ...this._config,
+            callbacks: this._config.callbacks?.map(cb => ({
+                ...cb,
+                filters: [
+                    ...(!cb.filters ? []
+                        : Array.isArray(cb.filters)
+                            ? cb.filters
+                            : [cb.filters]),
+                    ...this.globalFilters
+                ]
+            }))
+        }
     }
 }
 
 export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
     walk(obj: object) {
-        walk(obj, this.config)
+        walk(obj, this.getCurrentConfig())
+    }
+
+    * walkStep(obj: object): Generator<WalkNode> {
+        return walkStep(obj, this.getCurrentConfig())
     }
 
     withSimpleCallback(callback: Cb): this {
@@ -146,16 +157,20 @@ export class WalkBuilder extends BaseWalkBuilder<Callback, Cb> {
     withSimpleCallbacks(...callbacks: Cb[]): this {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
     }
-
-    * walkStep(obj: object): Generator<WalkNode> {
-        return walkStep(obj, this.config)
-    }
 }
 
 export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
 
+    async walk(obj: object): Promise<void> {
+        return walkAsync(obj, this.getCurrentConfig())
+    }
+
+    async* walkStep(obj: object): AsyncGenerator<WalkNode> {
+        return walkAsyncStep(obj, this.getCurrentConfig())
+    }
+
     withParallelizeAsyncCallbacks(val: boolean): this {
-        this.config.parallelizeAsyncCallbacks = val;
+        this._config.parallelizeAsyncCallbacks = val;
         return this;
     }
 
@@ -165,13 +180,5 @@ export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallback, AsyncCb> {
 
     withSimpleCallbacks(...callbacks: AsyncCb[]): this {
         return this.withCallbacks(...(callbacks.map(c => ({callback: c}))))
-    }
-
-    async walk(obj: object): Promise<void> {
-        return walkAsync(obj, this.config)
-    }
-
-    async* walkStep(obj: object): AsyncGenerator<WalkNode> {
-        return walkAsyncStep(obj, this.config)
     }
 }
