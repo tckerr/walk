@@ -1,3 +1,5 @@
 node_modules/
 /lib
 .idea
+**/*.log
+src/profile.js
