@@ -90,15 +90,15 @@ See the reference for more details!
 
 # Reference
 
-#### `walk(obj: object, config: Config<Callback>): void`
+`walk(obj: object, config: Config<Callback>): void`
 
 The primary method for traversing an object and injecting callbacks into the traversal. 
 
-#### `walkAsync(obj: object, config: Config<AsyncCallback>): Promise<void>`
+`walkAsync(obj: object, config: Config<AsyncCallback>): Promise<void>`
 
 Async version of `walk` which returns a promise.
 
-### Halting the walk
+## Halting the walk
 
 ```typescript
 import {apply, Break} from "walkjs";
@@ -110,11 +110,11 @@ apply({}, () => throw new Break())
 
 Throwing an instance of this class within a callback will halt processing completely. This allows for early exit, usually for circular graphs or in cases when you no longer need to continue.
 
-### Extra functions
+## Extra functions
 
 Walk has some extra utility functions built-in that you may find useful.
 
-#### Apply
+### Apply
 
 
 ```typescript
@@ -131,7 +131,7 @@ applyAsync(
 
 A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
 
-#### Deep copy
+### Deep copy
 
 ```typescript
 deepCopy(obj: object) : object
@@ -139,14 +139,14 @@ deepCopy(obj: object) : object
 
 Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
 
-#### Compare
+### Compare
 
 ```typescript
 compare(
     a: object, 
     b: object, 
     leavesOnly=false, 
-    formatter: NodePathFormatter=defaultFormatter
+    formatter: NodePathSegmentFormatter=defaultFormatter
 ): NodeComparison
 ```
 
@@ -162,16 +162,7 @@ type NodeComparison = {
 }
 ```
 
-#### Find
-
-```typescript
-find(obj: object, value: any, typeConversion: boolean=false)
-```
-
-This method returns all *values* who match within the `object`'s tree. Set the optional parameter `typeConversion`
-to `true` to do a `==` comparison (instead of the default `===`.)
-
-### Configuration:
+## Configuration:
 
 - `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
 - `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
@@ -183,7 +174,7 @@ to `true` to do a `==` comparison (instead of the default `===`.)
   setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once, determined by set membership of the WalkNode's `val`. Graphs will only process object/array references one time. Infinite trees will always process nodes -- use `throw new Break()` to end the processing manually. *Warning:
   infinite trees will never complete processing if a callback doesn't `throw new Break()`.*
 
-#### Config Defaults
+### Config Defaults
 
 ```typescript
 const defaultConfig = {
@@ -196,7 +187,7 @@ const defaultConfig = {
 }
 ```
 
-#### Using the builder
+### Using the builder
 
 An alternative way to configure a walk is to use either the `WalkBuilder` or `AsyncWalkBuilder`.
 
@@ -237,7 +228,7 @@ const result = new WalkBuilder()
     .walk(myObject)
 ```
 
-### Callbacks
+## Callbacks
 
 Callbacks are a way to execute custom functionality on certain nodes within our object tree. The general form of a callback object is:
 
@@ -265,10 +256,10 @@ Here are the properties you can define in a callback configuration, most of whic
   the callback will run on any node type.
 - `keyFilters: string[]`: an array of key names to run on. The callback will check the key of the property against this list. If unspecified, the callback will run on any key.
 - `positionFilter: PositionType`: The position the traversal to run on -- think of this as when it should execute.
-  Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed). You may also supply `'both'`.
-  For properties of container-type `'value'`, these two run in immediate succession.
+  Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the only difference here is whether the callback is invoked prior to yielding the node. However when running in `'depth'` mode, `'postWalk'` callbacks for a node will run *after all the callbacks of its children*. For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postWalk'` callbacks to run in the following order: `c`, `d`, `b`, `a`.
+ 
 
-### Nodes
+## Nodes
 
 `WalkNode` objects represent a single node in the tree, providing metadata about the value, its parents, siblings, and children. Nodes have the following properties:
 
@@ -279,9 +270,9 @@ Here are the properties you can define in a callback configuration, most of whic
 - `nodeType: NodeType`: The type of node the property is. Possible `NodeType` are `'array' | 'object' | 'value'`.
 - `isRoot: boolean`: A boolean that is set to `true` if the property is a root object, otherwise `false`.
 - `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function wil *not* be in the list.
-- `getPath(pathFormat?: (key: string, isArray: boolean) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
+- `getPath(pathFormat?: (node: WalkNode) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
   look something like `["friends"][10]["friends"][2]["name"]`, such that
-  calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`.
+  calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`. The `pathFormat` parameter should take a node and return the path segment for only that node; since `getPath` will automatically prepend the path of the node's parent as well.
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
 - `children: WalkNode[]`: A list of all child nodes.
 - `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).

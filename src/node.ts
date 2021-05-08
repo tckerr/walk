@@ -1,4 +1,4 @@
-import {Callback, NodePathFormatter, NodeType} from "./types";
+import {Callback, NodePathSegmentFormatter, NodeType} from "./types";
 import {defaultPathFormatter} from "./defaults";
 
 const getNormalizedType = (val: any): NodeType =>
@@ -46,12 +46,12 @@ export class WalkNode {
         )
     }
 
-    public getPath(pathFormat?: NodePathFormatter): string {
+    public getPath(pathFormat?: NodePathSegmentFormatter): string {
         if (this.isRoot)
             return ""
 
         pathFormat = pathFormat || defaultPathFormatter
-        return this.parent!.getPath(pathFormat) + pathFormat(this.key!.toString(), this.isArrayMember)
+        return this.parent!.getPath(pathFormat) + pathFormat(this)
     }
 
     public get children(): WalkNode[] {
