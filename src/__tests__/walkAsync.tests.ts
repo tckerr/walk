@@ -470,11 +470,15 @@ describe("walkAsync", () => {
         expect(count).toEqual(1)
     })
 
-    it("doesn't consider null the same ref in finite tree mode",  async() => {
+    it("doesn't consider null, NaN, or undefined the same ref in finite tree mode",  async() => {
 
         const data = {
             a: null,
             b: null,
+            c: NaN,
+            d: NaN,
+            e: undefined,
+            f: undefined,
         }
 
         let count = 0;
@@ -483,6 +487,6 @@ describe("walkAsync", () => {
             callbacks:[{callback: () => ++count}]
         })
 
-        expect(count).toEqual(3)
+        expect(count).toEqual(7)
     })
 })
