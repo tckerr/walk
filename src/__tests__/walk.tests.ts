@@ -478,4 +478,20 @@ describe("walk", () => {
 
         expect(count).toEqual(1)
     })
+
+    it("doesn't consider null the same ref in finite tree mode", () => {
+
+        const data = {
+            a: null,
+            b: null,
+        }
+
+        let count = 0;
+        walk(data, {
+            graphMode: 'finiteTree',
+            callbacks:[{callback: () => ++count}]
+        })
+
+        expect(count).toEqual(3)
+    })
 })
