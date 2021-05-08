@@ -11,10 +11,9 @@ export async function applyAsync(obj: object, ...callbacks: AsyncCallbackFn[]) {
     await walkAsync(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export function deepCopy(obj: object) {
+export function deepCopy(obj: object, delimiter: string='$walk:dc$') {
     const newObj = {};
-    const uuid = 'WALK:DEEP-COPY:DELIMITER';
-    const format: NodePathSegmentFormatter = ({key}) => uuid + key;
+    const format: NodePathSegmentFormatter = ({key}) => delimiter + key;
 
     walk(obj, {
         rootObjectCallbacks: false,
@@ -23,13 +22,13 @@ export function deepCopy(obj: object) {
             callback: function (node: WalkNode) {
                 switch (node.nodeType) {
                     case 'array':
-                        updateObjectViaPathString(newObj, [], node.getPath(format), uuid);
+                        updateObjectViaPathString(newObj, [], node.getPath(format), delimiter);
                         break;
                     case 'object':
-                        updateObjectViaPathString(newObj, {}, node.getPath(format), uuid);
+                        updateObjectViaPathString(newObj, node.val === null ? null : {}, node.getPath(format), delimiter);
                         break;
                     case 'value':
-                        updateObjectViaPathString(newObj, node.val, node.getPath(format), uuid);
+                        updateObjectViaPathString(newObj, node.val, node.getPath(format), delimiter);
                         break;
                 }
             }
