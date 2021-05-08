@@ -1,21 +1,7 @@
-import {unique, updateObjectViaPathString} from "./helpers";
+import {updateObjectViaPathString} from "./helpers";
 import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
 import {AsyncCallbackFn, CallbackFn, NodePathSegmentFormatter} from "./types";
-
-export function flatten(obj: object, key: string, onlyUnique: boolean) {
-    //return array of values that match the key
-    const arr: any[] = [];
-    walk(obj, {
-        callbacks: [{
-            keyFilters: [key],
-            callback: function (node) {
-                arr.push(node.val);
-            }
-        }]
-    });
-    return onlyUnique ? unique(arr) : arr;
-}
 
 export function apply(obj: object, ...callbacks: CallbackFn[]) {
     walk(obj, {callbacks: callbacks.map(c => ({callback: c}))})
