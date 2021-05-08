@@ -268,7 +268,7 @@ Here are the properties you can define in a callback configuration, most of whic
 - `val: any`: The value of the property. To use the above example, the value would be something like `183`.
 - `nodeType: NodeType`: The type of node the property is. Possible `NodeType` are `'array' | 'object' | 'value'`.
 - `isRoot: boolean`: A boolean that is set to `true` if the property is a root object, otherwise `false`.
-- `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function wil *not* be in the list.
+- `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function will *not* be in the list.
 - `getPath(pathFormat?: (node: WalkNode) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
   look something like `["friends"][10]["friends"][2]["name"]`, such that
   calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`. The `pathFormat` parameter should take a node and return the path segment for only that node; since `getPath` will automatically prepend the path of the node's parent as well.
