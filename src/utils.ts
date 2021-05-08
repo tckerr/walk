@@ -3,19 +3,22 @@ import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
 import {AsyncCallbackFn, CallbackFn, NodePathSegmentFormatter} from "./types";
 
-export function apply(obj: object, ...callbacks: CallbackFn[]) {
-    walk(obj, {callbacks: callbacks.map(c => ({callback: c}))})
+export function apply(target: any, ...callbacks: CallbackFn[]) {
+    walk(target, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export async function applyAsync(obj: object, ...callbacks: AsyncCallbackFn[]) {
-    await walkAsync(obj, {callbacks: callbacks.map(c => ({callback: c}))})
+export async function applyAsync(target: any, ...callbacks: AsyncCallbackFn[]) {
+    await walkAsync(target, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export function deepCopy(obj: object, delimiter: string='$walk:dc$') {
-    const newObj = {};
+export function deepCopy(target: object, delimiter: string='$walk:dc$') {
+    if (target === null)
+        return null
+
+    const newObj = Array.isArray(target) ? [] : {};
     const format: NodePathSegmentFormatter = ({key}) => delimiter + key;
 
-    walk(obj, {
+    walk(target, {
         rootObjectCallbacks: false,
         callbacks: [{
             positionFilter: 'preWalk',
@@ -43,7 +46,6 @@ export class Break extends Error {
     this.name = "Break";
   }
 }
-
 
 export function forceEvalGenerator<T>(gen: Generator<T>){
     for (const _ of gen) {}

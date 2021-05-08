@@ -89,11 +89,11 @@ See the reference for more details!
 
 # Reference
 
-`walk(obj: object, config: Config<Callback>): void`
+`walk(target: any, config: Config<Callback>): void`
 
 The primary method for traversing an object and injecting callbacks into the traversal. 
 
-`walkAsync(obj: object, config: Config<AsyncCallback>): Promise<void>`
+`walkAsync(target: any, config: Config<AsyncCallback>): Promise<void>`
 
 Async version of `walk` which returns a promise.
 
@@ -138,7 +138,7 @@ const defaultConfig = {
 
 An alternative way to configure a walk is to use either the `WalkBuilder` or `AsyncWalkBuilder`.
 
-Call `WalkBuilder.walk(obj: object)` to execute the walk with the builder's configuration. 
+Call `WalkBuilder.walk(target: any)` to execute the walk with the builder's configuration. 
 
 
 Example:
@@ -233,12 +233,12 @@ Walk has some extra utility functions built-in that you may find useful.
 
 ```typescript
 apply(
-    obj: object, 
+    target: any, 
     ...callbacks: ((node: NodeType) => void)[]
 ): void
     
 applyAsync(
-    obj: object, 
+    target: any, 
     ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
 ): Promise<void>
 ```
@@ -248,7 +248,7 @@ A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
 ## Deep copy
 
 ```typescript
-deepCopy(obj: object) : object
+deepCopy(target: object) : object
 ```
 
 Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
@@ -257,8 +257,8 @@ Returns a deep copy of an object, with all array and object references replaced 
 
 ```typescript
 compare(
-    a: object, 
-    b: object, 
+    a: any, 
+    b: any, 
     leavesOnly=false, 
     formatter: NodePathSegmentFormatter=defaultFormatter
 ): NodeComparison

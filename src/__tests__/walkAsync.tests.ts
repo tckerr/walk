@@ -1,12 +1,49 @@
-import {walk, walkAsync} from "../walk";
 import {Break} from "../utils";
 import {WalkNode} from "../node";
+import {walkAsync} from "../walk";
 
 function timeout(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
 describe("walkAsync", () => {
+
+    it("works with undefined root", async () => {
+        let count = 0;
+        await walkAsync(undefined, {callbacks:[{
+            filters: n => typeof n.val === 'undefined',
+            callback: () => ++count}
+        ]})
+        expect(count).toEqual(1);
+    });
+
+    it("works with NaN root", async () => {
+        let count = 0;
+        await walkAsync(NaN, {callbacks:[{
+            filters: n => isNaN(n.val),
+            callback: () => ++count}
+        ]})
+        expect(count).toEqual(1);
+    });
+
+    it("works with null root", async () => {
+        let count = 0;
+        await walkAsync(null, {callbacks:[{
+            filters: n => n.val === null,
+            callback: () => ++count}
+        ]})
+        expect(count).toEqual(1);
+    });
+
+    it("works with array root", async () => {
+        let count = 0;
+        await walkAsync([0], {callbacks:[{
+            nodeTypeFilters: 'array',
+            callback: () => ++count}
+        ]})
+        expect(count).toEqual(1);
+    });
+
     it("runs once per node filtered by key", async () => {
         const data = {
             person: {

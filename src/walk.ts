@@ -36,8 +36,8 @@ class Walker<T extends CallbackFn> {
         return matchCallbacks<CallbackFn>(node, 'postWalk', this.ctx)
     }
 
-    * walk(obj: object): Generator<WalkNode> {
-        const queue: WalkNode[] = [WalkNode.fromRoot(obj)];
+    * walk(target: any): Generator<WalkNode> {
+        const queue: WalkNode[] = [WalkNode.fromRoot(target)];
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
@@ -72,8 +72,8 @@ class Walker<T extends CallbackFn> {
         }
     }
 
-    async* walkAsync(obj: object): AsyncGenerator<WalkNode> {
-        const queue: WalkNode[] = [WalkNode.fromRoot(obj)];
+    async* walkAsync(target: any): AsyncGenerator<WalkNode> {
+        const queue: WalkNode[] = [WalkNode.fromRoot(target)];
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
@@ -111,22 +111,22 @@ class Walker<T extends CallbackFn> {
     }
 }
 
-export function* walkStep(obj: object, config: PartialConfig<CallbackFn>): Generator<WalkNode> {
+export function* walkStep(target: any, config: PartialConfig<CallbackFn> = {}): Generator<WalkNode> {
     const ctx = buildContext(config);
     const walker = new Walker<CallbackFn>(ctx)
-    yield* walker.walk(obj)
+    yield* walker.walk(target)
 }
 
-export async function* walkAsyncStep(obj: object, config: PartialConfig<AsyncCallbackFn>): AsyncGenerator<WalkNode> {
+export async function* walkAsyncStep(target: any, config: PartialConfig<AsyncCallbackFn> = {}): AsyncGenerator<WalkNode> {
     const ctx = buildContext(config);
     const walker = new Walker<AsyncCallbackFn>(ctx)
-    yield* walker.walkAsync(obj)
+    yield* walker.walkAsync(target)
 }
 
-export function walk(obj: object, config: PartialConfig<CallbackFn>): void {
-    forceEvalGenerator(walkStep(obj, config))
+export function walk(target: any, config: PartialConfig<CallbackFn> = {}): void {
+    forceEvalGenerator(walkStep(target, config))
 }
 
-export async function walkAsync(obj: object, config: PartialConfig<AsyncCallbackFn>): Promise<void> {
-    await forceEvalAsyncGenerator(walkAsyncStep(obj, config))
+export async function walkAsync(target: any, config: PartialConfig<AsyncCallbackFn> = {}): Promise<void> {
+    await forceEvalAsyncGenerator(walkAsyncStep(target, config))
 }

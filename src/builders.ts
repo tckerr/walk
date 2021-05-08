@@ -139,12 +139,12 @@ abstract class BaseWalkBuilder<T extends CallbackFn> {
 }
 
 export class WalkBuilder extends BaseWalkBuilder<CallbackFn> {
-    walk(obj: object) {
-        walk(obj, this.getCurrentConfig())
+    walk(target: any) {
+        walk(target, this.getCurrentConfig())
     }
 
-    * walkStep(obj: object): Generator<WalkNode> {
-        return walkStep(obj, this.getCurrentConfig())
+    * walkStep(target: any): Generator<WalkNode> {
+        return walkStep(target, this.getCurrentConfig())
     }
 
     withSimpleCallback(callback: CallbackFn): this {
@@ -158,12 +158,12 @@ export class WalkBuilder extends BaseWalkBuilder<CallbackFn> {
 
 export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallbackFn> {
 
-    async walk(obj: object): Promise<void> {
-        return walkAsync(obj, this.getCurrentConfig())
+    async walk(target: any): Promise<void> {
+        return walkAsync(target, this.getCurrentConfig())
     }
 
-    async* walkStep(obj: object): AsyncGenerator<WalkNode> {
-        return walkAsyncStep(obj, this.getCurrentConfig())
+    async* walkStep(target: any): AsyncGenerator<WalkNode> {
+        return walkAsyncStep(target, this.getCurrentConfig())
     }
 
     withParallelizeAsyncCallbacks(val: boolean): this {
