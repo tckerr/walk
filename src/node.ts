@@ -20,7 +20,7 @@ export class WalkNode {
         public nodeType: NodeType = 'value',
         public rawType: string = 'undefined',
         public executedCallbacks: Callback<any>[] = [],
-        public keyInParent?: string | number,
+        public key?: string | number,
         public parent?: WalkNode,) {
         this.id = WalkNode._idx++;
     }
@@ -51,7 +51,7 @@ export class WalkNode {
             return ""
 
         pathFormat = pathFormat || defaultPathFormatter
-        return this.parent!.getPath(pathFormat) + pathFormat(this.keyInParent!.toString(), this.isArrayMember)
+        return this.parent!.getPath(pathFormat) + pathFormat(this.key!.toString(), this.isArrayMember)
     }
 
     public get children(): WalkNode[] {
