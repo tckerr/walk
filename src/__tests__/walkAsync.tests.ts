@@ -1,4 +1,4 @@
-import {walkAsync} from "../walk";
+import {walk, walkAsync} from "../walk";
 import {Break} from "../utils";
 import {WalkNode} from "../node";
 
@@ -413,5 +413,23 @@ describe("walkAsync", () => {
             "[\"people\"][0]",
             "[\"pets\"][0]",
         ])
+    })
+
+    it("only runs callbacks for filtered nodes", async () => {
+
+        const data = {
+            people: ['Alice'],
+            pets: ['Fido'],
+        }
+
+        let count = 0;
+        await walkAsync(data, {
+            callbacks: [{
+                filters: [(n) => n.val === 'Fido'],
+                callback: () => count++
+            }]
+        })
+
+        expect(count).toEqual(1)
     })
 })
