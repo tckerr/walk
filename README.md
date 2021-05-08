@@ -6,16 +6,16 @@
     - [Async](#async)
 4. [Reference](#reference)
     - [Halting the walk](#halting-the-walk)
-    - [Extra functions](#extra-functions)
-        - [Apply](#apply)
-        - [Deep copy](#deep-copy)
-        - [Compare](#compare)
     - [Configuration](#configuration)
         - [Defaults](#config-defaults)
         - [Builder](#using-the-builder)
     - [Callbacks](#callbacks)
     - [Nodes](#nodes)
-5. [Running walk as a generator](#running-walk-as-a-generator)
+5. [Extra functions](#extra-functions)
+    - [Apply](#apply)
+    - [Deep copy](#deep-copy)
+    - [Compare](#compare)
+6. [Running walk as a generator](#running-walk-as-a-generator)
 
 # Description
 
@@ -108,58 +108,6 @@ apply({}, () => throw new Break())
 ```
 
 Throwing an instance of this class within a callback will halt processing completely. This allows for early exit, usually for circular graphs or in cases when you no longer need to continue.
-
-## Extra functions
-
-Walk has some extra utility functions built-in that you may find useful.
-
-### Apply
-
-
-```typescript
-apply(
-    obj: object, 
-    ...callbacks: ((node: NodeType) => void)[]
-): void
-    
-applyAsync(
-    obj: object, 
-    ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
-): Promise<void>
-```
-
-A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
-
-### Deep copy
-
-```typescript
-deepCopy(obj: object) : object
-```
-
-Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
-
-### Compare
-
-```typescript
-compare(
-    a: object, 
-    b: object, 
-    leavesOnly=false, 
-    formatter: NodePathSegmentFormatter=defaultFormatter
-): NodeComparison
-```
-
-This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
-
-```typescript
-type NodeComparison = {
-    path: string,
-    a?: any
-    b?: any
-    hasDifference: boolean,
-    difference?: 'added' | 'removed' | {before: any, after: any}
-}
-```
 
 ## Configuration:
 
@@ -275,6 +223,58 @@ Here are the properties you can define in a callback configuration, most of whic
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
 - `children: WalkNode[]`: A list of all child nodes.
 - `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).
+
+# Extra functions
+
+Walk has some extra utility functions built-in that you may find useful.
+
+## Apply
+
+
+```typescript
+apply(
+    obj: object, 
+    ...callbacks: ((node: NodeType) => void)[]
+): void
+    
+applyAsync(
+    obj: object, 
+    ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
+): Promise<void>
+```
+
+A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
+
+## Deep copy
+
+```typescript
+deepCopy(obj: object) : object
+```
+
+Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
+
+## Compare
+
+```typescript
+compare(
+    a: object, 
+    b: object, 
+    leavesOnly=false, 
+    formatter: NodePathSegmentFormatter=defaultFormatter
+): NodeComparison
+```
+
+This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
+
+```typescript
+type NodeComparison = {
+    path: string,
+    a?: any
+    b?: any
+    hasDifference: boolean,
+    difference?: 'added' | 'removed' | {before: any, after: any}
+}
+```
 
 # Running walk as a generator
 
