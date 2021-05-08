@@ -27,9 +27,9 @@ export class WalkNode {
         this.id = WalkNode._idx++;
     }
 
-    public static fromRoot(obj: object): WalkNode {
+    public static fromRoot(obj: any): WalkNode {
         return new WalkNode(
-            obj, true, false, 'object', typeof obj,
+            obj, true, false, getNormalizedType(obj), typeof obj,
             [], undefined, undefined
         )
     }
