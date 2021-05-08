@@ -1,7 +1,7 @@
 import {unique, updateObjectViaPathString} from "./helpers";
 import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
-import {AsyncCallbackFn, CallbackFn, NodePathFormatter} from "./types";
+import {AsyncCallbackFn, CallbackFn, NodePathSegmentFormatter} from "./types";
 
 export function flatten(obj: object, key: string, onlyUnique: boolean) {
     //return array of values that match the key
@@ -25,23 +25,10 @@ export async function applyAsync(obj: object, ...callbacks: AsyncCallbackFn[]) {
     await walkAsync(obj, {callbacks: callbacks.map(c => ({callback: c}))})
 }
 
-export function findAll<T>(obj: object, value: T, typeConversion: boolean = false): T[] {
-    const comparison = typeConversion
-        ? (a: any, b: any) => a == b
-        : (a: any, b: any) => a === b;
-    const matches: T[] = [];
-    apply(obj, function (node) {
-        if (comparison(node.val, value)) {
-            matches.push(node.val);
-        }
-    });
-    return matches;
-}
-
 export function deepCopy(obj: object) {
     const newObj = {};
     const uuid = 'WALK:DEEP-COPY:DELIMITER';
-    const format = (key: string) => uuid + key;
+    const format: NodePathSegmentFormatter = ({key}) => uuid + key;
 
     walk(obj, {
         rootObjectCallbacks: false,
@@ -89,9 +76,9 @@ type NodeComparison = {
     difference?: 'added' | 'removed' | {before: any, after: any}
 }
 
-const defaultFormatter: NodePathFormatter = (key: string, isArr: boolean) => isArr ? `[${key}]` : `.${key}`
+const defaultFormatter: NodePathSegmentFormatter = ({key, isArrayMember: isArr}) => isArr ? `[${key}]` : `.${key}`
 
-export function compare(a: object, b: object, leavesOnly=false, formatter: NodePathFormatter=defaultFormatter): NodeComparison[] {
+export function compare(a: object, b: object, leavesOnly=false, formatter: NodePathSegmentFormatter=defaultFormatter): NodeComparison[] {
 
     const aNodes: {[key: string]: WalkNode} = {}
     const bNodes: {[key: string]: WalkNode} = {}

@@ -15,7 +15,7 @@ export interface IOrderable {
     executionOrder?: number
 }
 
-export type NodePathFormatter = (node: string, isArr: boolean) => string;
+export type NodePathSegmentFormatter = (node: WalkNode) => string;
 export type CallbackFn = (node: WalkNode) => void;
 export type AsyncCallbackFn = CallbackFn | ((node: WalkNode) => Promise<void>);
 export type NodeFilterFn = (node: WalkNode) => boolean;

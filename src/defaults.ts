@@ -1,7 +1,7 @@
-import {Callback, CallbackFn, Config, Context, NodePathFormatter, PartialConfig} from "./types";
+import {Callback, CallbackFn, Config, Context, NodePathSegmentFormatter, PartialConfig} from "./types";
 import {executionOrderSort} from "./helpers";
 
-export const defaultPathFormatter: NodePathFormatter = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
+export const defaultPathFormatter: NodePathSegmentFormatter = ({key, isArrayMember}) => isArrayMember ? `[${key}]` : `["${key}"]`;
 
 export function buildDefaultConfig<T extends CallbackFn>() : Config<T> {
     return {
