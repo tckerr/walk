@@ -1,4 +1,5 @@
-import {CallbackFn, Config, Context, NodePathFormatter, PartialConfig} from "./types";
+import {Callback, CallbackFn, Config, Context, NodePathFormatter, PartialConfig} from "./types";
+import {executionOrderSort} from "./helpers";
 
 export const defaultPathFormatter: NodePathFormatter = (key: string, isArr: boolean) => isArr ? `[${key}]` : `["${key}"]`;
 
@@ -25,4 +26,27 @@ export function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<
             "postWalk": []
         },
     }
+}
+
+export function buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
+    const ctx = buildDefaultContext<T>(config)
+    ctx.config.callbacks.forEach((cb: Callback<T>) => {
+        const callback: Callback<T> = {
+            ...cb,
+            executionOrder: typeof cb.executionOrder == 'undefined' ? 0 : cb.executionOrder,
+            positionFilter: cb.positionFilter || "preWalk"
+        }
+
+        if (callback.positionFilter === "both") {
+            ctx.callbacksByPosition["preWalk"].push(callback)
+            ctx.callbacksByPosition["postWalk"].push(callback)
+        } else if (typeof callback.positionFilter !== 'undefined') {
+            ctx.callbacksByPosition[callback.positionFilter!].push(callback)
+        }
+    })
+
+    for (const key in ctx.callbacksByPosition)
+        ctx.callbacksByPosition[key] = ctx.callbacksByPosition[key].sort(executionOrderSort);
+
+    return ctx;
 }

@@ -155,7 +155,7 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 callback: (n) => {
-                    expect(n.keyInParent).toBeUndefined()
+                    expect(n.key).toBeUndefined()
                     expect(n.val).toEqual({})
                     expect(n.getPath()).toEqual('')
                     expect(n.isRoot).toEqual(true)
@@ -176,7 +176,7 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 keyFilters: ['person'], callback: (n) => {
-                    expect(n.keyInParent).toBe('person')
+                    expect(n.key).toBe('person')
                     expect(n.val).toEqual({name: 'Bob'})
                     expect(n.getPath()).toEqual('[\"person\"]')
                     expect(n.isRoot).toEqual(false)
@@ -199,7 +199,7 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 keyFilters: ['name'], callback: (n) => {
-                    expect(n.keyInParent).toBe('name')
+                    expect(n.key).toBe('name')
                     expect(n.val).toEqual('Bob')
                     expect(n.getPath()).toEqual('[\"person\"][\"name\"]')
                     expect(n.isRoot).toEqual(false)
@@ -222,7 +222,7 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 keyFilters: ['people'], callback: (n) => {
-                    expect(n.keyInParent).toBe('people')
+                    expect(n.key).toBe('people')
                     expect(n.val).toEqual(['Bob'])
                     expect(n.getPath()).toEqual('[\"people\"]')
                     expect(n.isRoot).toEqual(false)
@@ -248,7 +248,7 @@ describe("walk", () => {
                 {
                     callback: (n: WalkNode) => {
                         if (!n.isArrayMember) return;
-                        expect(n.keyInParent).toBe(0)
+                        expect(n.key).toBe(0)
                         expect(n.val).toEqual('Bob')
                         expect(n.getPath()).toEqual('[\"people\"][0]')
                         expect(n.isRoot).toEqual(false)

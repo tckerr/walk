@@ -239,9 +239,7 @@ const result = new WalkBuilder()
 
 ### Callbacks
 
-We want to be able to execute custom functionality on certain properties within our object tree. For example, if we
-wanted to print the count of all friends for any `person` object we encounter, we could write a callback object for
-the `friends` property. The general form of a callback object is:
+Callbacks are a way to execute custom functionality on certain nodes within our object tree. The general form of a callback object is:
 
 ```
 {   
@@ -274,12 +272,12 @@ Here are the properties you can define in a callback configuration, most of whic
 
 `WalkNode` objects represent a single node in the tree, providing metadata about the value, its parents, siblings, and children. Nodes have the following properties:
 
-- `key: string|number`: The key of this property as defined on it's parent. For example, if this callback is running on
+- `key: string|number`: The key of this property as defined on its parent. For example, if this callback is running on
   the `'weight'` property of a `person`, the `key` would be `'weight'`. This will
   be the numerical index for members in arrays.
 - `val: any`: The value of the property. To use the above example, the value would be something like `183`.
 - `nodeType: NodeType`: The type of node the property is. Possible `NodeType` are `'array' | 'object' | 'value'`.
-- `isRoot: boolean`: A boolean that is set to ```true``` if the property is a root object, otherwise ```false```.
+- `isRoot: boolean`: A boolean that is set to `true` if the property is a root object, otherwise `false`.
 - `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function wil *not* be in the list.
 - `getPath(pathFormat?: (key: string, isArray: boolean) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
   look something like `["friends"][10]["friends"][2]["name"]`, such that
@@ -292,7 +290,7 @@ Here are the properties you can define in a callback configuration, most of whic
 
 Behind the scenes, `walk` and `walkAsync` run as generators (`Generator<WalkNode>` and `AsyncGenerator<WalkNode>`, respectively). As they step through the object graph, nodes are yielded. 
 
-The default `walk`/`walkAsync` functions coerce the generator to a list before returning. However you can access the generator directly, simple use the following imports instead:
+The default `walk`/`walkAsync` functions coerce the generator to a list before returning. However, you can access the generator directly; simply use the following imports instead:
 
 ```typescript
 import {walkStep, walkAsyncStep} from "walkjs";

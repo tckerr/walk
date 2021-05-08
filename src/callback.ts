@@ -23,12 +23,12 @@ function filterByKey<T extends CallbackFn>(cb: Callback<T>, node: WalkNode) {
     if (typeof cb.keyFilters === 'undefined' || (Array.isArray(cb.keyFilters) && cb.keyFilters.length === 0))
         return true;
 
-    if (typeof node.keyInParent !== 'string')
+    if (typeof node.key !== 'string')
         return false;
 
     return Array.isArray(cb.keyFilters)
-        ? cb.keyFilters.indexOf(node.keyInParent) !== -1
-        : cb.keyFilters === node.keyInParent;
+        ? cb.keyFilters.indexOf(node.key) !== -1
+        : cb.keyFilters === node.key;
 }
 
 export function matchCallbacks<T extends CallbackFn>(node: WalkNode, position: PositionType, ctx: Context<T>): Callback<T>[] {
