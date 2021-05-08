@@ -33,7 +33,7 @@ describe('walkAsyncStep', () => {
                     positionFilter: "preWalk",
                     filters: n => n.val === 1,
                     callback: async () => {
-                        await timeout(100)
+                        await timeout(30)
                         preCount++
                     }
                 },
@@ -49,13 +49,13 @@ describe('walkAsyncStep', () => {
         }
 
         const generator = walkAsyncStep(data, config);
-        let res = await generator.next()
+        await generator.next()
         expect(preCount).toEqual(0);
         expect(postCount).toEqual(0);
-        res = await generator.next()
+        await generator.next()
         expect(preCount).toEqual(1);
         expect(postCount).toEqual(0);
-        res = await generator.next()
+        let res = await generator.next()
         expect(preCount).toEqual(1);
         expect(postCount).toEqual(1);
         expect(res.done).toEqual(true);

@@ -2,14 +2,16 @@ import {Callback, NodePathSegmentFormatter, NodeType} from "./types";
 import {defaultPathFormatter} from "./defaults";
 
 const getNormalizedType = (val: any): NodeType =>
-    Array.isArray(val)
+{
+    return Array.isArray(val)
         ? 'array'
-    : typeof val === 'object'
+        : typeof val === 'object'
         ? 'object'
         : 'value';
+}
 
 export class WalkNode {
-    private _children?: WalkNode[]
+    private _children?: WalkNode[] = undefined
     private static _idx: number = 0;
     public readonly id: number;
 
@@ -58,20 +60,24 @@ export class WalkNode {
         if (typeof this._children === 'undefined')
             this._children = [...this.getChildren()];
 
-        return this._children ?? (this._children = [...this.getChildren()]);
+        return this._children;
     }
 
     public * getChildren(): Generator<WalkNode> {
         if (this.nodeType === 'array')
+        {
             for (let i = 0; i < this.val.length; i++)
                 yield WalkNode.fromArrayIndex(this, i)
-
-        if (this.nodeType === 'object')
+        }
+        else if (this.nodeType === 'object'){
+            if(this.val === null)
+                return
             for (let key of Object.keys(this.val))
                 yield WalkNode.fromObjectKey(this, key)
+        }
     }
 
     public get siblings(): WalkNode[] {
-        return this.parent?.children.filter((c) => c.id !== this.id) ?? []
+        return this.parent?.children.filter(c => c.id !== this.id) ?? []
     }
 }
