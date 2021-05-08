@@ -10,7 +10,6 @@
         - [Apply](#apply)
         - [Deep copy](#deep-copy)
         - [Compare](#compare)
-        - [Find](#find)
     - [Configuration](#configuration)
         - [Defaults](#config-defaults)
         - [Builder](#using-the-builder)
