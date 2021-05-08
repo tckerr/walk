@@ -67,7 +67,7 @@ obj["c"]["d"] = 4
 ```
 ## Async
 
-Async walks work almost exactly the same as the sync ones, but have an async signature. Note that all callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
+Async walks work almost exactly the same as the sync ones, but have an async signature. All callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
 
 ```typescript
 import {AsyncWalkBuilder} from 'walkjs';
@@ -112,7 +112,7 @@ Throwing an instance of this class within a callback will halt processing comple
 ## Configuration:
 
 - `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
-- `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Note that callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
+- `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
 - `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
 - `callbacks: Callback<T>[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
 - `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
@@ -295,4 +295,4 @@ for await (const node of walkAsyncStep(obj, config))
 
 ```
 
-Note that `preWalk` callbacks are invoked prior to yielding a node, and `postWalk` callbacks after.
+`preWalk` callbacks are invoked prior to yielding a node, and `postWalk` callbacks after.
