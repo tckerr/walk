@@ -469,4 +469,20 @@ describe("walkAsync", () => {
 
         expect(count).toEqual(1)
     })
+
+    it("doesn't consider null the same ref in finite tree mode",  async() => {
+
+        const data = {
+            a: null,
+            b: null,
+        }
+
+        let count = 0;
+        await walkAsync(data, {
+            graphMode: 'finiteTree',
+            callbacks:[{callback: () => ++count}]
+        })
+
+        expect(count).toEqual(3)
+    })
 })
