@@ -4,7 +4,6 @@ import {
     CallbackFn,
     Config,
     Context,
-    NodePathSegmentFormatter,
     PartialConfig,
     IOrderable
 } from "./types";
@@ -14,12 +13,6 @@ function executionOrderSort<T extends IOrderable>(a: T, b: T) {
     const _b = b.executionOrder || 0;
     return _a < _b ? -1 : _a > _b ? 1 : 0;
 }
-
-export const defaultPathFormatter: NodePathSegmentFormatter = ({
-                                                                   key,
-                                                                   isArrayMember
-                                                               }) => isArrayMember ? `[${key}]` : `["${key}"]`;
-
 
 function buildDefaultCallbacks<T extends CallbackFn>(sources: Callback<T>[]): _Callback<T>[] {
     return sources.map(cb => {
