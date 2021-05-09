@@ -4,9 +4,31 @@ import {WalkNode} from "./node";
 import {_CallbackStacker} from "./callback";
 import {Break} from "./break";
 
+class NodeQueue {
+
+    private queue: WalkNode[] = []
+    public add: (nodes: WalkNode[]) => void;
+
+    constructor(private depthFirst: boolean) {
+        this.add = depthFirst
+            ? (nodes: WalkNode[]) => this.queue.unshift(...nodes)
+            : (nodes: WalkNode[]) => this.queue.push(...nodes)
+    }
+
+    public shift(): WalkNode | undefined {
+        return this.queue.shift()
+    }
+
+    public get more(): boolean{
+        return this.queue.length > 0;
+    }
+}
+
 class Walker<T extends CallbackFn> {
+    private depthFirst: boolean;
 
     constructor(private ctx: Context<T>) {
+        this.depthFirst = ctx.config.traversalMode === 'depth';
     }
 
     shouldSkipVisitation(node: WalkNode): boolean {
@@ -23,39 +45,33 @@ class Walker<T extends CallbackFn> {
         return false;
     }
 
-    get depthFirst(): boolean {
-        return this.ctx.config.traversalMode === 'depth'
-    }
-
     * walk(target: any): Generator<WalkNode> {
-        const queue: WalkNode[] = [WalkNode.fromRoot(target)];
-        const pusher = this.depthFirst
-            ? (nodes: WalkNode[]) => queue.unshift(...nodes)
-            : (nodes: WalkNode[]) => queue.push(...nodes)
+        const queue = new NodeQueue(this.depthFirst);
         const stacker = _CallbackStacker.ForSync(this.ctx)
+
         try {
+            queue.add([WalkNode.fromRoot(target)])
             do {
                 const node = queue.shift()!
                 if (this.shouldSkipVisitation(node))
                     continue
 
                 const children = node.children;
-                pusher(children)
+                queue.add(children)
 
                 stacker.executeOne(node, 'preWalk');
 
                 yield node;
 
-                if (this.depthFirst && children.length) {
-                    const lastChild = children[children.length - 1];
-                    stacker.push(lastChild.id, node, 'postWalk')
-                } else {
+                if (this.depthFirst && children.length)
+                    stacker.pushToStack(node, 'postWalk')
+                else {
                     stacker.executeOne(node, 'postWalk');
                     for (let _ of stacker.execute(node.id)) {
                     }
                 }
 
-            } while (queue.length > 0)
+            } while (queue.more)
         } catch (err) {
             if (!(err instanceof Break))
                 throw err;
@@ -63,34 +79,31 @@ class Walker<T extends CallbackFn> {
     }
 
     async* walkAsync(target: any): AsyncGenerator<WalkNode> {
-        const queue: WalkNode[] = [WalkNode.fromRoot(target)];
-        const pusher = this.depthFirst
-            ? (nodes: WalkNode[]) => queue.unshift(...nodes)
-            : (nodes: WalkNode[]) => queue.push(...nodes)
+        const queue = new NodeQueue(this.depthFirst);
         const stacker = _CallbackStacker.ForAsync(this.ctx)
 
         try {
+            queue.add([WalkNode.fromRoot(target)])
             do {
                 const node = queue.shift()!
                 if (this.shouldSkipVisitation(node))
                     continue
 
                 const children = node.children;
-                pusher(children)
+                queue.add(children)
 
                 await stacker.executeOne(node, 'preWalk');
 
                 yield node;
 
-                if (this.depthFirst && children.length) {
-                    const lastChild = children[children.length - 1];
-                    stacker.push(lastChild.id, node, 'postWalk')
-                } else {
+                if (this.depthFirst && children.length)
+                    stacker.pushToStack(node, 'postWalk')
+                else {
                     await stacker.executeOne(node, 'postWalk')
-                    for (const promise of stacker.execute(node.id))
-                        await promise
+                    for await (const _ of stacker.execute(node.id)){
+                    }
                 }
-            } while (queue.length > 0)
+            } while (queue.more)
         } catch (err) {
             if (!(err instanceof Break))
                 throw err;
