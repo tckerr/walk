@@ -25,8 +25,6 @@ function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void
     }
 }
 
-type AsyncExecutor = (callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode) => Promise<void>;
-
 async function execCallbacksAsync(callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> {
     for (let cb of callbacks) {
         await cb.callback(node)
@@ -50,11 +48,11 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
     constructor(private ctx: Context<T>, private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
     }
 
-    public static ForSync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<CallbackFn, void> {
+    public static forSync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<CallbackFn, void> {
         return new _CallbackStacker<CallbackFn, void>(ctx, execCallbacks)
     }
 
-    public static ForAsync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<AsyncCallbackFn, void | Promise<void>> {
+    public static forAsync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<AsyncCallbackFn, void | Promise<void>> {
         return new _CallbackStacker<CallbackFn, void>(ctx, ctx.config.parallelizeAsyncCallbacks
             ? execCallbacksAsyncInParallel
             : execCallbacksAsync)

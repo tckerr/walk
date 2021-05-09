@@ -47,7 +47,7 @@ class Walker<T extends CallbackFn> {
 
     * walk(target: any): Generator<WalkNode> {
         const queue = new NodeQueue(this.depthFirst);
-        const stacker = _CallbackStacker.ForSync(this.ctx)
+        const stacker = _CallbackStacker.forSync(this.ctx)
 
         try {
             queue.add([WalkNode.fromRoot(target)])
@@ -79,7 +79,7 @@ class Walker<T extends CallbackFn> {
 
     async* walkAsync(target: any): AsyncGenerator<WalkNode> {
         const queue = new NodeQueue(this.depthFirst);
-        const stacker = _CallbackStacker.ForAsync(this.ctx)
+        const stacker = _CallbackStacker.forAsync(this.ctx)
 
         try {
             queue.add([WalkNode.fromRoot(target)])
@@ -124,7 +124,6 @@ export async function* walkAsyncStep(target: any, config: PartialConfig<AsyncCal
 
 export function walk(target: any, config: PartialConfig<CallbackFn> = {}): void {
     for (let _ of walkStep(target, config)) {
-
     }
 }
 

@@ -24,7 +24,7 @@ class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> 
         }
     }
 
-    withExecutionOrder(order: number): CallbacksBuilder<T, TUpper> {
+    withExecutionOrder(order: number): this {
         this.callback.executionOrder = order;
         return this;
     }
@@ -38,17 +38,17 @@ class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> 
         return this;
     }
 
-    filteredByNodeTypes(...types: NodeType[]): CallbacksBuilder<T, TUpper> {
+    filteredByNodeTypes(...types: NodeType[]): this {
         this.callback.nodeTypeFilters = types;
         return this;
     }
 
-    filteredByKeys(...keys: string[]): CallbacksBuilder<T, TUpper> {
+    filteredByKeys(...keys: string[]): this {
         this.callback.keyFilters = keys;
         return this;
     }
 
-    filteredByPosition(position: PositionType): CallbacksBuilder<T, TUpper> {
+    filteredByPosition(position: PositionType): this {
         this.callback.positionFilter = position;
         return this;
     }
