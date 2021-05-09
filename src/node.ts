@@ -1,5 +1,4 @@
 import {_Callback, NodePathSegmentFormatter, NodeType} from "./types";
-import {defaultPathFormatter} from "./defaults";
 
 const getNormalizedType = (val: any): NodeType => {
     return Array.isArray(val)
@@ -7,6 +6,10 @@ const getNormalizedType = (val: any): NodeType => {
         : typeof val === 'object'
             ? 'object'
             : 'value';
+}
+
+function defaultPathFormatter(node: WalkNode) {
+    return node.isArrayMember ? `[${node.key}]` : `["${node.key}"]`
 }
 
 export class WalkNode {
