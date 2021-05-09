@@ -223,6 +223,8 @@ Here are the properties you can define in a callback configuration, most of whic
 - `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
 - `children: WalkNode[]`: A list of all child nodes.
 - `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).
+- `descendants: WalkNode[]`: A list of all descendant nodes (recursively traversing children).
+- `ancestors: WalkNode[]`: A list of nodes formed by recursively traversing parents back to the root.
 
 # Extra functions
 

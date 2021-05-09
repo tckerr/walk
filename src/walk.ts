@@ -11,7 +11,7 @@ class Walker<T extends CallbackFn> {
     }
 
     shouldSkipVisitation(node: WalkNode): boolean {
-        if (node.nodeType === 'value' || node.val === null || Object.is(NaN, node.val))
+        if (!node.canBeCompared())
             return false;
 
         if (!this.ctx.seenObjects.has(node.val))

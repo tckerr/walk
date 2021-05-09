@@ -1,13 +1,12 @@
 import {Callback, NodePathSegmentFormatter, NodeType} from "./types";
 import {defaultPathFormatter} from "./defaults";
 
-const getNormalizedType = (val: any): NodeType =>
-{
+const getNormalizedType = (val: any): NodeType => {
     return Array.isArray(val)
         ? 'array'
         : typeof val === 'object'
-        ? 'object'
-        : 'value';
+            ? 'object'
+            : 'value';
 }
 
 export class WalkNode {
@@ -48,6 +47,20 @@ export class WalkNode {
         )
     }
 
+    public canBeCompared(): boolean {
+        return this.nodeType !== 'value' && this.val !== null && !Object.is(NaN, this.val);
+    }
+
+    public sameAs(other: WalkNode): boolean {
+        if (!this.canBeCompared() || this.nodeType !== other.nodeType)
+            return false;
+
+        if (this.val === null || Object.is(NaN, this.val))
+            return false;
+
+        return Object.is(this.val, other.val)
+    }
+
     public getPath(pathFormat?: NodePathSegmentFormatter): string {
         if (this.isRoot)
             return ""
@@ -63,14 +76,12 @@ export class WalkNode {
         return this._children;
     }
 
-    public * getChildren(): Generator<WalkNode> {
-        if (this.nodeType === 'array')
-        {
+    public* getChildren(): Generator<WalkNode> {
+        if (this.nodeType === 'array') {
             for (let i = 0; i < this.val.length; i++)
                 yield WalkNode.fromArrayIndex(this, i)
-        }
-        else if (this.nodeType === 'object'){
-            if(this.val === null)
+        } else if (this.nodeType === 'object') {
+            if (this.val === null)
                 return
             for (let key of Object.keys(this.val))
                 yield WalkNode.fromObjectKey(this, key)
@@ -78,6 +89,37 @@ export class WalkNode {
     }
 
     public get siblings(): WalkNode[] {
-        return this.parent?.children.filter(c => c.id !== this.id) ?? []
+        return [...this.getSiblings()]
+    }
+
+    public* getSiblings(): Generator<WalkNode> {
+        if (!this.parent)
+            return
+
+        for (let child of this.parent.children)
+            if (this.key !== child.key)
+                yield child;
+    }
+
+    public get ancestors(): WalkNode[] {
+        return [...this.getAncestors()]
+    }
+    public* getAncestors(): Generator<WalkNode> {
+        let next = this.parent
+        while (next){
+            yield next
+            next = next.parent
+        }
+    }
+
+    public get descendants(): WalkNode[] {
+        return [...this.getDescendants()]
+    }
+    public* getDescendants(): Generator<WalkNode> {
+        for (const child of this.getChildren())
+        {
+            yield child
+            yield * child.getDescendants()
+        }
     }
 }
