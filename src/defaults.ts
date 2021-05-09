@@ -29,7 +29,7 @@ function buildDefaultCallbacks<T extends CallbackFn>(sources: Callback<T>[]): _C
     })
 }
 
-export function buildDefaultConfig<T extends CallbackFn>(config: PartialConfig<T>): Config<T> {
+function buildDefaultConfig<T extends CallbackFn>(config: PartialConfig<T>): Config<T> {
     return {
         traversalMode: typeof config.traversalMode !== 'undefined' ? config.traversalMode : 'depth',
         rootObjectCallbacks: typeof config.rootObjectCallbacks !== 'undefined' ? config.rootObjectCallbacks : true,
@@ -40,7 +40,7 @@ export function buildDefaultConfig<T extends CallbackFn>(config: PartialConfig<T
     }
 }
 
-export function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
+function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
     return {
         config: buildDefaultConfig<T>(config),
         seenObjects: new Set<any>(),
