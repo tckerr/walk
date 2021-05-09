@@ -1,4 +1,4 @@
-import {compare} from "../utils";
+import {compare} from "../utils/compare";
 
 describe('compare', () => {
     it("executes a correct comparison", () => {

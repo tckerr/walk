@@ -1,4 +1,4 @@
-import {_Callback, AsyncCallbackFn, CallbackFn, Config, Context, PositionType} from "./types";
+import {_Callback, AsyncCallbackFn, CallbackFn, Context, PositionType} from "./types";
 import {WalkNode} from "./node";
 
 function filterByFilters<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
@@ -45,12 +45,6 @@ const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCallbackFn
     );
 }
 
-function getAsyncExecutor(parallel: boolean): AsyncExecutor {
-    return parallel
-        ? execCallbacksAsyncInParallel
-        : execCallbacksAsync;
-}
-
 export class _CallbackStacker<T extends CallbackFn, Rt> {
 
     constructor(private ctx: Context<T>, private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
@@ -61,7 +55,9 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
     }
 
     public static ForAsync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<AsyncCallbackFn, void | Promise<void>> {
-        return new _CallbackStacker<CallbackFn, void>(ctx, getAsyncExecutor(ctx.config.parallelizeAsyncCallbacks))
+        return new _CallbackStacker<CallbackFn, void>(ctx, ctx.config.parallelizeAsyncCallbacks
+            ? execCallbacksAsyncInParallel
+            : execCallbacksAsync)
     }
 
     private _matchCallbacks(node: WalkNode, position: PositionType): _Callback<T>[] {
