@@ -1,6 +1,6 @@
-import {Break} from "../utils";
 import {WalkNode} from "../node";
 import {walkAsync} from "../walk";
+import {Break} from "../break";
 
 function timeout(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));

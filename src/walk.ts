@@ -1,8 +1,8 @@
 import {AsyncCallbackFn, CallbackFn, Context, PartialConfig} from "./types";
 import {_buildContext} from "./defaults";
-import {Break} from "./utils";
 import {WalkNode} from "./node";
 import {_CallbackStacker} from "./callback";
+import {Break} from "./break";
 
 class Walker<T extends CallbackFn> {
 
