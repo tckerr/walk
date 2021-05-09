@@ -17,43 +17,14 @@ export const defaultPathFormatter: NodePathSegmentFormatter = ({
 
 
 function buildDefaultCallbacks<T extends CallbackFn>(sources: Callback<T>[]): _Callback<T>[] {
-    return sources.map(source => {
-        let keyFilters: string[] = [];
-        let nodeTypeFilters: NodeType[] = []
-        let executionOrder = 0;
-        let filters: NodeFilterFn[] = []
-        let positionFilter: PositionType = 'preWalk';
-
-        if (typeof source.keyFilters !== 'undefined') {
-            if (Array.isArray(source.keyFilters))
-                keyFilters = source.keyFilters
-            else
-                keyFilters = [source.keyFilters]
-        }
-        if (typeof source.nodeTypeFilters !== 'undefined') {
-            if (Array.isArray(source.nodeTypeFilters))
-                nodeTypeFilters = source.nodeTypeFilters
-            else
-                nodeTypeFilters = [source.nodeTypeFilters]
-        }
-        if (typeof source.filters !== 'undefined') {
-            if (Array.isArray(source.filters))
-                filters = source.filters
-            else
-                filters = [source.filters]
-        }
-        if (typeof source.executionOrder !== 'undefined')
-            executionOrder = source.executionOrder
-        if (typeof source.positionFilter !== 'undefined')
-            positionFilter = source.positionFilter
-
+    return sources.map(cb => {
         return {
-            callback: source.callback,
-            keyFilters,
-            nodeTypeFilters,
-            executionOrder,
-            filters,
-            positionFilter
+            callback: cb.callback,
+            keyFilters: typeof cb.keyFilters === 'undefined' ? [] : (Array.isArray(cb.keyFilters) ? cb.keyFilters : [cb.keyFilters]),
+            nodeTypeFilters: typeof cb.nodeTypeFilters === 'undefined' ? [] : (Array.isArray(cb.nodeTypeFilters) ? cb.nodeTypeFilters : [cb.nodeTypeFilters]),
+            executionOrder: typeof cb.executionOrder === 'undefined' ? 0 : cb.executionOrder,
+            filters: typeof cb.filters === 'undefined' ? [] : (Array.isArray(cb.filters) ? cb.filters : [cb.filters]),
+            positionFilter: typeof cb.positionFilter === 'undefined' ? 'preWalk' : cb.positionFilter
         }
     })
 }
