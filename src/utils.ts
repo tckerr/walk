@@ -53,7 +53,7 @@ export class Break extends Error {
   }
 }
 
-type NodeComparison = {
+export type NodeComparison = {
     path: string,
     a?: any
     b?: any

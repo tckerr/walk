@@ -2,7 +2,7 @@ import {AsyncCallbackFn, CallbackFn, Context, PartialConfig} from "./types";
 import {_buildContext} from "./defaults";
 import {Break} from "./utils";
 import {WalkNode} from "./node";
-import {_CallbackStacker, _matchCallbacks} from "./callback";
+import {_CallbackStacker} from "./callback";
 
 class Walker<T extends CallbackFn> {
 
@@ -27,20 +27,12 @@ class Walker<T extends CallbackFn> {
         return this.ctx.config.traversalMode === 'depth'
     }
 
-    getPreWalkCallbacks<T extends CallbackFn>(node: WalkNode) {
-        return _matchCallbacks<CallbackFn>(node, 'preWalk', this.ctx)
-    }
-
-    getPostWalkCallbacks<T extends CallbackFn>(node: WalkNode) {
-        return _matchCallbacks<CallbackFn>(node, 'postWalk', this.ctx)
-    }
-
     * walk(target: any): Generator<WalkNode> {
         const queue: WalkNode[] = [WalkNode.fromRoot(target)];
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
-        const stacker = _CallbackStacker.ForSync()
+        const stacker = _CallbackStacker.ForSync(this.ctx)
         try {
             do {
                 const node = queue.shift()!
@@ -50,17 +42,15 @@ class Walker<T extends CallbackFn> {
                 const children = node.children;
                 pusher(children)
 
-                stacker.executeOne(node, this.getPreWalkCallbacks(node));
+                stacker.executeOne(node, 'preWalk');
 
                 yield node;
 
-                const afterCbs = this.getPostWalkCallbacks(node);
-
                 if (this.depthFirst && children.length) {
                     const lastChild = children[children.length - 1];
-                    stacker.push(lastChild.id, node, afterCbs)
+                    stacker.push(lastChild.id, node, 'postWalk')
                 } else {
-                    stacker.executeOne(node, afterCbs);
+                    stacker.executeOne(node, 'postWalk');
                     for (let _ of stacker.execute(node.id)) {
                     }
                 }
@@ -77,7 +67,7 @@ class Walker<T extends CallbackFn> {
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
-        const stacker = _CallbackStacker.ForAsync(this.ctx.config.parallelizeAsyncCallbacks)
+        const stacker = _CallbackStacker.ForAsync(this.ctx)
 
         try {
             do {
@@ -88,17 +78,15 @@ class Walker<T extends CallbackFn> {
                 const children = node.children;
                 pusher(children)
 
-                await stacker.executeOne(node, this.getPreWalkCallbacks(node));
+                await stacker.executeOne(node, 'preWalk');
 
                 yield node;
 
-                const afterCbs = this.getPostWalkCallbacks(node);
-
                 if (this.depthFirst && children.length) {
                     const lastChild = children[children.length - 1];
-                    stacker.push(lastChild.id, node, afterCbs)
+                    stacker.push(lastChild.id, node, 'postWalk')
                 } else {
-                    await stacker.executeOne(node, afterCbs)
+                    await stacker.executeOne(node, 'postWalk')
                     for (const promise of stacker.execute(node.id))
                         await promise
                 }

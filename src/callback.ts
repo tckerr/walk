@@ -18,23 +18,6 @@ function filterByKey<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
         );
 }
 
-export function _matchCallbacks<T extends CallbackFn>(node: WalkNode, position: PositionType, ctx: Context<T>): _Callback<T>[] {
-
-    if (!ctx.config.runCallbacks)
-        return []
-
-    if (node.isRoot && !ctx.config.rootObjectCallbacks)
-        return [];
-
-    let callbacks = ctx.callbacksByPosition[position];
-
-    return (callbacks || [])
-        .map(cb => cb as _Callback<T>)
-        .filter(cb => filterByFilters(cb, node))
-        .filter(cb => filterByNodeType(cb, node))
-        .filter(cb => filterByKey(cb, node))
-}
-
 function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void {
     for (let cb of callbacks) {
         cb.callback(node)
@@ -70,14 +53,32 @@ function getAsyncExecutor(parallel: boolean): AsyncExecutor {
 
 export class _CallbackStacker<T extends CallbackFn, Rt> {
 
-    constructor(private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
+    constructor(private ctx: Context<T>, private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
     }
 
-    public static ForSync(): _CallbackStacker<CallbackFn, void>{
-        return new _CallbackStacker<CallbackFn, void>(execCallbacks)
+    public static ForSync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<CallbackFn, void> {
+        return new _CallbackStacker<CallbackFn, void>(ctx, execCallbacks)
     }
-    public static ForAsync(parallel: boolean): _CallbackStacker<AsyncCallbackFn, void | Promise<void>>{
-        return new _CallbackStacker<CallbackFn, void>(getAsyncExecutor(parallel))
+
+    public static ForAsync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<AsyncCallbackFn, void | Promise<void>> {
+        return new _CallbackStacker<CallbackFn, void>(ctx, getAsyncExecutor(ctx.config.parallelizeAsyncCallbacks))
+    }
+
+    private _matchCallbacks(node: WalkNode, position: PositionType): _Callback<T>[] {
+
+        if (!this.ctx.config.runCallbacks)
+            return []
+
+        if (node.isRoot && !this.ctx.config.rootObjectCallbacks)
+            return [];
+
+        let callbacks = this.ctx.callbacksByPosition[position];
+
+        return (callbacks || [])
+            .map(cb => cb as _Callback<T>)
+            .filter(cb => filterByFilters(cb, node))
+            .filter(cb => filterByNodeType(cb, node))
+            .filter(cb => filterByKey(cb, node))
     }
 
     private lookup: {
@@ -87,14 +88,16 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
         }
     } = {}
 
-    public push(key: number, node: WalkNode, callbacks: _Callback<T>[]) {
+    public push(key: number, node: WalkNode, position: PositionType) {
+        const callbacks = this._matchCallbacks(node, position)
         this.lookup[key] = {
             trigger: node.id,
             fn: () => this.executor(callbacks, node)
         }
     }
 
-    public executeOne(node: WalkNode, callbacks: _Callback<T>[]): Rt {
+    public executeOne(node: WalkNode, position: PositionType): Rt {
+        const callbacks = this._matchCallbacks(node, position)
         return this.executor(callbacks, node)
     }
 
