@@ -3,12 +3,17 @@ import {
     _Callback,
     CallbackFn,
     Config,
-    Context, NodeFilterFn,
+    Context,
     NodePathSegmentFormatter,
-    NodeType,
-    PartialConfig, PositionType
+    PartialConfig,
+    IOrderable
 } from "./types";
-import {executionOrderSort} from "./helpers";
+
+function executionOrderSort<T extends IOrderable>(a: T, b: T) {
+    const _a = a.executionOrder || 0;
+    const _b = b.executionOrder || 0;
+    return _a < _b ? -1 : _a > _b ? 1 : 0;
+}
 
 export const defaultPathFormatter: NodePathSegmentFormatter = ({
                                                                    key,
@@ -51,7 +56,7 @@ function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Co
     }
 }
 
-export function buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
+export function _buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
     const ctx = buildDefaultContext<T>(config)
     ctx.config.callbacks.forEach((callback: _Callback<T>) => {
         if (callback.positionFilter === "both") {

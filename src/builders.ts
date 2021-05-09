@@ -1,7 +1,6 @@
 import {
     Callback,
     AsyncCallbackFn,
-    _Callback,
     CallbackFn,
     GraphMode, NodeFilterFn,
     NodeType,
