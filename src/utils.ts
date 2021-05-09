@@ -1,7 +1,13 @@
-import {updateObjectViaPathString} from "./helpers";
 import {walk, walkAsync} from "./walk";
 import {WalkNode} from "./node";
 import {AsyncCallbackFn, CallbackFn, NodePathSegmentFormatter} from "./types";
+
+function updateObjectViaPathString(obj: any, val: any, path: string, delimiter: string) {
+    const block = path.split(delimiter).slice(1);
+    while (block.length > 1)
+        obj = obj[block.shift()!];
+    obj[block.shift()!] = val;
+}
 
 export function apply(target: any, ...callbacks: CallbackFn[]) {
     walk(target, {callbacks: callbacks.map(c => ({callback: c}))})
@@ -45,14 +51,6 @@ export class Break extends Error {
     super(message);
     this.name = "Break";
   }
-}
-
-export function forceEvalGenerator<T>(gen: Generator<T>){
-    for (const _ of gen) {}
-}
-
-export async function forceEvalAsyncGenerator<T>(gen: AsyncGenerator<T>){
-    for await (const _ of gen) {}
 }
 
 type NodeComparison = {

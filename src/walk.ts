@@ -1,9 +1,8 @@
 import {AsyncCallbackFn, CallbackFn, Context, PartialConfig} from "./types";
-import {buildContext} from "./defaults";
-import {CallbackStacker} from "./helpers";
-import {Break, forceEvalAsyncGenerator, forceEvalGenerator} from "./utils";
+import {_buildContext} from "./defaults";
+import {Break} from "./utils";
 import {WalkNode} from "./node";
-import {execCallbacks, getAsyncExecutor, matchCallbacks} from "./callback";
+import {_CallbackStacker, _matchCallbacks} from "./callback";
 
 class Walker<T extends CallbackFn> {
 
@@ -29,11 +28,11 @@ class Walker<T extends CallbackFn> {
     }
 
     getPreWalkCallbacks<T extends CallbackFn>(node: WalkNode) {
-        return matchCallbacks<CallbackFn>(node, 'preWalk', this.ctx)
+        return _matchCallbacks<CallbackFn>(node, 'preWalk', this.ctx)
     }
 
     getPostWalkCallbacks<T extends CallbackFn>(node: WalkNode) {
-        return matchCallbacks<CallbackFn>(node, 'postWalk', this.ctx)
+        return _matchCallbacks<CallbackFn>(node, 'postWalk', this.ctx)
     }
 
     * walk(target: any): Generator<WalkNode> {
@@ -41,7 +40,7 @@ class Walker<T extends CallbackFn> {
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
-        const stacker = new CallbackStacker<CallbackFn, void>(execCallbacks)
+        const stacker = _CallbackStacker.ForSync()
         try {
             do {
                 const node = queue.shift()!
@@ -62,7 +61,8 @@ class Walker<T extends CallbackFn> {
                     stacker.push(lastChild.id, node, afterCbs)
                 } else {
                     stacker.executeOne(node, afterCbs);
-                    forceEvalGenerator(stacker.execute(node.id))
+                    for (let _ of stacker.execute(node.id)) {
+                    }
                 }
 
             } while (queue.length > 0)
@@ -77,8 +77,7 @@ class Walker<T extends CallbackFn> {
         const pusher = this.depthFirst
             ? (nodes: WalkNode[]) => queue.unshift(...nodes)
             : (nodes: WalkNode[]) => queue.push(...nodes)
-        const executor = getAsyncExecutor(this.ctx.config);
-        const stacker = new CallbackStacker<AsyncCallbackFn, Promise<void> | void>(executor)
+        const stacker = _CallbackStacker.ForAsync(this.ctx.config.parallelizeAsyncCallbacks)
 
         try {
             do {
@@ -112,21 +111,24 @@ class Walker<T extends CallbackFn> {
 }
 
 export function* walkStep(target: any, config: PartialConfig<CallbackFn> = {}): Generator<WalkNode> {
-    const ctx = buildContext(config);
+    const ctx = _buildContext(config);
     const walker = new Walker<CallbackFn>(ctx)
     yield* walker.walk(target)
 }
 
 export async function* walkAsyncStep(target: any, config: PartialConfig<AsyncCallbackFn> = {}): AsyncGenerator<WalkNode> {
-    const ctx = buildContext(config);
+    const ctx = _buildContext(config);
     const walker = new Walker<AsyncCallbackFn>(ctx)
     yield* walker.walkAsync(target)
 }
 
 export function walk(target: any, config: PartialConfig<CallbackFn> = {}): void {
-    forceEvalGenerator(walkStep(target, config))
+    for (let _ of walkStep(target, config)) {
+
+    }
 }
 
 export async function walkAsync(target: any, config: PartialConfig<AsyncCallbackFn> = {}): Promise<void> {
-    await forceEvalAsyncGenerator(walkAsyncStep(target, config))
+    for await (let _ of walkAsyncStep(target, config)) {
+    }
 }

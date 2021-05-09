@@ -1,4 +1,4 @@
-import {AsyncCallbackFn, _Callback, CallbackFn, Config, Context, PositionType} from "./types";
+import {_Callback, AsyncCallbackFn, CallbackFn, Config, Context, PositionType} from "./types";
 import {WalkNode} from "./node";
 
 function filterByFilters<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
@@ -18,7 +18,7 @@ function filterByKey<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
         );
 }
 
-export function matchCallbacks<T extends CallbackFn>(node: WalkNode, position: PositionType, ctx: Context<T>): _Callback<T>[] {
+export function _matchCallbacks<T extends CallbackFn>(node: WalkNode, position: PositionType, ctx: Context<T>): _Callback<T>[] {
 
     if (!ctx.config.runCallbacks)
         return []
@@ -35,7 +35,7 @@ export function matchCallbacks<T extends CallbackFn>(node: WalkNode, position: P
         .filter(cb => filterByKey(cb, node))
 }
 
-export function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void {
+function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void {
     for (let cb of callbacks) {
         cb.callback(node)
         node.executedCallbacks.push(cb);
@@ -44,14 +44,14 @@ export function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode
 
 type AsyncExecutor = (callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode) => Promise<void>;
 
-export async function execCallbacksAsync(callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> {
+async function execCallbacksAsync(callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> {
     for (let cb of callbacks) {
         await cb.callback(node)
         node.executedCallbacks.push(cb);
     }
 }
 
-export const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> => {
+const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> => {
     await Promise.all(
         callbacks.map(cb =>
             Promise.resolve(cb.callback(node))
@@ -62,8 +62,50 @@ export const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCal
     );
 }
 
-export function getAsyncExecutor<T extends CallbackFn>(config: Config<T>): AsyncExecutor {
-    return config.parallelizeAsyncCallbacks
+function getAsyncExecutor(parallel: boolean): AsyncExecutor {
+    return parallel
         ? execCallbacksAsyncInParallel
         : execCallbacksAsync;
+}
+
+export class _CallbackStacker<T extends CallbackFn, Rt> {
+
+    constructor(private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
+    }
+
+    public static ForSync(): _CallbackStacker<CallbackFn, void>{
+        return new _CallbackStacker<CallbackFn, void>(execCallbacks)
+    }
+    public static ForAsync(parallel: boolean): _CallbackStacker<AsyncCallbackFn, void | Promise<void>>{
+        return new _CallbackStacker<CallbackFn, void>(getAsyncExecutor(parallel))
+    }
+
+    private lookup: {
+        [key: number]: {
+            trigger: number,
+            fn: () => Rt
+        }
+    } = {}
+
+    public push(key: number, node: WalkNode, callbacks: _Callback<T>[]) {
+        this.lookup[key] = {
+            trigger: node.id,
+            fn: () => this.executor(callbacks, node)
+        }
+    }
+
+    public executeOne(node: WalkNode, callbacks: _Callback<T>[]): Rt {
+        return this.executor(callbacks, node)
+    }
+
+    public* execute(nodeId: number): Generator<Rt> {
+        let next = this.lookup[nodeId]
+        delete this.lookup[nodeId]
+        while (next) {
+            yield next.fn()
+            const trigger = next.trigger;
+            next = this.lookup[trigger]
+            delete this.lookup[trigger]
+        }
+    }
 }

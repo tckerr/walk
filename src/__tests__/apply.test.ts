@@ -1,5 +1,4 @@
 import {apply} from "../index";
-import {WalkNode} from "../node";
 
 describe('apply', () => {
 
