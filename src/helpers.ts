@@ -1,4 +1,4 @@
-import {Callback, CallbackFn, IOrderable} from "./types";
+import {_Callback, CallbackFn, IOrderable} from "./types";
 import {WalkNode} from "./node";
 
 export function executionOrderSort<T extends IOrderable>(a: T, b: T) {
@@ -25,7 +25,7 @@ export function updateObjectViaPathString(obj: any, val: any, path: string, deli
 
 export class CallbackStacker<T extends CallbackFn, Rt> {
 
-    constructor(private executor: (callbacks: Callback<T>[], node: WalkNode) => Rt) {
+    constructor(private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
     }
 
     private lookup: {
@@ -35,14 +35,14 @@ export class CallbackStacker<T extends CallbackFn, Rt> {
         }
     } = {}
 
-    public push(key: number, node: WalkNode, callbacks: Callback<T>[]) {
+    public push(key: number, node: WalkNode, callbacks: _Callback<T>[]) {
         this.lookup[key] = {
             trigger: node.id,
             fn: () => this.executor(callbacks, node)
         }
     }
 
-    public executeOne(node: WalkNode, callbacks: Callback<T>[]): Rt {
+    public executeOne(node: WalkNode, callbacks: _Callback<T>[]): Rt {
         return this.executor(callbacks, node)
     }
 
