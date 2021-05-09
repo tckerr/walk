@@ -38,21 +38,6 @@ export type Config<T extends CallbackFn> = {
     readonly parallelizeAsyncCallbacks: boolean
 }
 
-export type Callback<T extends CallbackFn> = IOrderable & {
-    executionOrder?: number,
-    positionFilter?: PositionType
-    keyFilters?: string[],
-    nodeTypeFilters?: NodeType[] | NodeType
-    filters?: NodeFilterFn[] | NodeFilterFn
-    callback: T
-}
-
-export type PartialConfig<T extends CallbackFn> = {
-    traversalMode?: TraversalMode
-    callbacks?: Callback<T>[]
-    graphMode?: GraphMode
-    rootObjectCallbacks?: boolean
-    runCallbacks?: boolean
-    parallelizeAsyncCallbacks?: boolean
-}
+export type Callback<T extends CallbackFn> = Partial<_Callback<T>>
+export type PartialConfig<T extends CallbackFn> = Partial<Config<T>>
 

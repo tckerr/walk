@@ -84,9 +84,10 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
         }
     } = {}
 
-    public push(key: number, node: WalkNode, position: PositionType) {
+    public pushToStack(node: WalkNode, position: PositionType) {
+        const lastChild = node.children[node.children.length - 1];
         const callbacks = this._matchCallbacks(node, position)
-        this.lookup[key] = {
+        this.lookup[lastChild.id] = {
             trigger: node.id,
             fn: () => this.executor(callbacks, node)
         }
