@@ -70,7 +70,6 @@ class Walker<T extends CallbackFn> {
                     for (let _ of stacker.execute(node.id)) {
                     }
                 }
-
             } while (queue.more)
         } catch (err) {
             if (!(err instanceof Break))
