@@ -30,14 +30,21 @@ export type _Callback<T extends CallbackFn> = IOrderable & {
 }
 
 export type Config<T extends CallbackFn> = {
-    readonly traversalMode: TraversalMode
-    readonly callbacks: _Callback<T>[]
-    readonly graphMode: GraphMode
-    readonly rootObjectCallbacks: boolean
-    readonly runCallbacks: boolean
-    readonly parallelizeAsyncCallbacks: boolean
+    traversalMode: TraversalMode
+    callbacks: _Callback<T>[]
+    graphMode: GraphMode
+    rootObjectCallbacks: boolean
+    runCallbacks: boolean
+    parallelizeAsyncCallbacks: boolean
 }
 
 export type Callback<T extends CallbackFn> = Partial<_Callback<T>>
-export type PartialConfig<T extends CallbackFn> = Partial<Config<T>>
 
+export type PartialConfig<T extends CallbackFn> = {
+    traversalMode?: TraversalMode
+    callbacks?: Callback<T>[]
+    graphMode?: GraphMode
+    rootObjectCallbacks?: boolean
+    runCallbacks?: boolean
+    parallelizeAsyncCallbacks?: boolean
+}
