@@ -6,7 +6,7 @@ describe("walk", () => {
     it("works with undefined root", () => {
         let count = 0;
         walk(undefined, {callbacks:[{
-            filters: n => typeof n.val === 'undefined',
+            filters: [n => typeof n.val === 'undefined'],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -15,7 +15,7 @@ describe("walk", () => {
     it("works with NaN root", () => {
         let count = 0;
         walk(NaN, {callbacks:[{
-            filters: n => isNaN(n.val),
+            filters: [n => isNaN(n.val)],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -24,7 +24,7 @@ describe("walk", () => {
     it("works with null root", () => {
         let count = 0;
         walk(null, {callbacks:[{
-            filters: n => n.val === null,
+            filters: [n => n.val === null],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -33,7 +33,7 @@ describe("walk", () => {
     it("works with array root",  () => {
         let count = 0;
         walk([0], {callbacks:[{
-            nodeTypeFilters: 'array',
+            nodeTypeFilters: ['array'],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);

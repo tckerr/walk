@@ -11,7 +11,7 @@ describe("walkAsync", () => {
     it("works with undefined root", async () => {
         let count = 0;
         await walkAsync(undefined, {callbacks:[{
-            filters: n => typeof n.val === 'undefined',
+            filters: [n => typeof n.val === 'undefined'],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -20,7 +20,7 @@ describe("walkAsync", () => {
     it("works with NaN root", async () => {
         let count = 0;
         await walkAsync(NaN, {callbacks:[{
-            filters: n => isNaN(n.val),
+            filters: [n => isNaN(n.val)],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -29,7 +29,7 @@ describe("walkAsync", () => {
     it("works with null root", async () => {
         let count = 0;
         await walkAsync(null, {callbacks:[{
-            filters: n => n.val === null,
+            filters: [n => n.val === null],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
@@ -38,7 +38,7 @@ describe("walkAsync", () => {
     it("works with array root", async () => {
         let count = 0;
         await walkAsync([0], {callbacks:[{
-            nodeTypeFilters: 'array',
+            nodeTypeFilters: ['array'],
             callback: () => ++count}
         ]})
         expect(count).toEqual(1);
