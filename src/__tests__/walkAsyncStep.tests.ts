@@ -31,7 +31,7 @@ describe('walkAsyncStep', () => {
             callbacks: [
                 {
                     positionFilter: "preWalk",
-                    filters: n => n.val === 1,
+                    filters: [n => n.val === 1],
                     callback: async () => {
                         await timeout(30)
                         preCount++
@@ -39,7 +39,7 @@ describe('walkAsyncStep', () => {
                 },
                 {
                     positionFilter: "postWalk",
-                    filters: n => n.val === 1,
+                    filters: [n => n.val === 1],
                     callback: async () => {
                         await timeout(100)
                         postCount++
