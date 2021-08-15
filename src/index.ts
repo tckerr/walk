@@ -8,3 +8,4 @@ export * from "./break";
 export * from './utils/apply'
 export * from './utils/deepCopy'
 export * from './utils/compare'
+export * from './utils/reduce'
