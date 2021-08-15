@@ -15,6 +15,7 @@
     - [Apply](#apply)
     - [Deep copy](#deep-copy)
     - [Compare](#compare)
+    - [Reduce](#reduce)
 6. [Running walk as a generator](#running-walk-as-a-generator)
 
 # Description
@@ -268,15 +269,17 @@ compare(
 
 This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
 
+## Reduce
+
 ```typescript
-type NodeComparison = {
-    path: string,
-    a?: any
-    b?: any
-    hasDifference: boolean,
-    difference?: 'added' | 'removed' | {before: any, after: any}
-}
+reduce(
+    source: object, 
+    initialValue: T, 
+    fn: (accumulator: T, node: WalkNode) => T
+): T
 ```
+
+This function accumulates a value of type T, starting with `initialValue`, by invoking `fn` on each node in `source` and adding the result to the accumulated value T.
 
 # Running walk as a generator
 
