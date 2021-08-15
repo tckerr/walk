@@ -1,6 +1,5 @@
 import {NodePathSegmentFormatter} from "../types";
 import {walk} from "../walk";
-import {WalkNode} from "../node";
 
 function updateObjectViaPathString(obj: any, path: string, delimiter: string, val: any) {
     const block = path.split(delimiter).slice(1);

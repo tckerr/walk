@@ -1,6 +1,6 @@
 {
   "name": "walkjs",
-  "version": "3.1.11",
+  "version": "3.2.0",
   "description": "A Javascript library for traversing object trees.",
   "main": "lib/index.js",
   "types": "lib/index.d.ts",
