@@ -269,6 +269,16 @@ compare(
 
 This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
 
+```typescript
+type NodeComparison = {
+    path: string,
+    a?: any
+    b?: any
+    hasDifference: boolean,
+    difference?: 'added' | 'removed' | {before: any, after: any}
+}
+```
+
 ## Reduce
 
 ```typescript
