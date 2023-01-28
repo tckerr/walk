@@ -162,7 +162,7 @@ export class AsyncWalkBuilder extends BaseWalkBuilder<AsyncCallbackFn> {
         return walkAsync(target, this.getCurrentConfig())
     }
 
-    async* walkStep(target: any): AsyncGenerator<WalkNode> {
+    async* walkStep(target: any) {
         return walkAsyncStep(target, this.getCurrentConfig())
     }
 

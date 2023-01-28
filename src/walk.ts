@@ -77,7 +77,7 @@ class Walker<T extends CallbackFn> {
         }
     }
 
-    async* walkAsync(target: any): AsyncGenerator<WalkNode> {
+    async* walkAsync(target: any){
         const queue = new NodeQueue(this.depthFirst);
         const stacker = _CallbackStacker.forAsync(this.ctx)
 
@@ -116,7 +116,7 @@ export function* walkStep(target: any, config: PartialConfig<CallbackFn> = {}): 
     yield* walker.walk(target)
 }
 
-export async function* walkAsyncStep(target: any, config: PartialConfig<AsyncCallbackFn> = {}): AsyncGenerator<WalkNode> {
+export async function* walkAsyncStep(target: any, config: PartialConfig<AsyncCallbackFn> = {}){
     const ctx = _buildContext(config);
     const walker = new Walker<AsyncCallbackFn>(ctx)
     yield* walker.walkAsync(target)
