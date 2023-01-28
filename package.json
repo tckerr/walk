@@ -17,9 +17,7 @@
     "prebuild": "npm run clean",
     "build": "tsc",
     "prepare": "npm run build",
-    "prepublishOnly": "npm test",
-    "version": "git add -A src",
-    "postversion": "git push && git push --tags"
+    "prepublishOnly": "npm test"
   },
   "repository": {
     "type": "git",
