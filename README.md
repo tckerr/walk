@@ -20,7 +20,7 @@
 
 # Description
 
-Walk is a Javascript library for traversing object trees. The library includes:
+Walk is a 0 dependency Javascript/Typescript library for traversing object trees. The library includes:
 
 - Functions for recursive processing of nested object trees and directed graphs
 - User defined, type-specific (array/obj/value) callback hooks that get executed during the traversal
