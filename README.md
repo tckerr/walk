@@ -30,7 +30,7 @@ Walk is a Javascript library for traversing object trees. The library includes:
 
 # Installation
 
-`npm install walkjs --save`
+`npm install walkjs`
 
 # Quickstart
 
