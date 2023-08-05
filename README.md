@@ -263,7 +263,8 @@ compare(
     a: any, 
     b: any, 
     leavesOnly=false, 
-    formatter: NodePathSegmentFormatter=defaultFormatter
+    formatter: NodePathSegmentFormatter=defaultFormatter,
+    nodeComparison: NodeComparisonFn = (a, b) => Object.is(a.val, b.val)
 ): NodeComparison
 ```
 
