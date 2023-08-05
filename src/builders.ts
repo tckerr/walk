@@ -38,16 +38,6 @@ class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> 
         return this;
     }
 
-    filteredByNodeTypes(...types: NodeType[]): this {
-        this.callback.nodeTypeFilters = types;
-        return this;
-    }
-
-    filteredByKeys(...keys: string[]): this {
-        this.callback.keyFilters = keys;
-        return this;
-    }
-
     filteredByPosition(position: PositionType): this {
         this.callback.positionFilter = position;
         return this;
@@ -84,16 +74,6 @@ abstract class BaseWalkBuilder<T extends CallbackFn> {
 
     withGraphMode(graphMode: GraphMode): this {
         this._config.graphMode = graphMode;
-        return this;
-    }
-
-    withRootObjectCallbacks(val: boolean): this {
-        this._config.rootObjectCallbacks = val;
-        return this;
-    }
-
-    withRunningCallbacks(val: boolean): this {
-        this._config.runCallbacks = val;
         return this;
     }
 

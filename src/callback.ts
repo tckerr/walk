@@ -2,20 +2,7 @@ import {_Callback, AsyncCallbackFn, CallbackFn, Context, PositionType} from "./t
 import {WalkNode} from "./node";
 
 function filterByFilters<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
-    return cb.filters.every(f => f(node))
-}
-
-function filterByNodeType<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
-    return !cb.nodeTypeFilters.length
-        || cb.nodeTypeFilters.indexOf(node.nodeType) !== -1;
-}
-
-function filterByKey<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
-    return cb.keyFilters.length === 0
-        || (
-            typeof node.key === 'string'
-            && cb.keyFilters.indexOf(node.key) !== -1
-        );
+    return Array.isArray(cb.filters) ? cb.filters.every(f => f(node)) : cb.filters(node)
 }
 
 function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void {
@@ -59,20 +46,11 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
     }
 
     private _matchCallbacks(node: WalkNode, position: PositionType): _Callback<T>[] {
-
-        if (!this.ctx.config.runCallbacks)
-            return []
-
-        if (node.isRoot && !this.ctx.config.rootObjectCallbacks)
-            return [];
-
         let callbacks = this.ctx.callbacksByPosition[position];
 
         return (callbacks || [])
             .map(cb => cb as _Callback<T>)
             .filter(cb => filterByFilters(cb, node))
-            .filter(cb => filterByNodeType(cb, node))
-            .filter(cb => filterByKey(cb, node))
     }
 
     private lookup: {

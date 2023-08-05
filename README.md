@@ -23,7 +23,7 @@
 Walk is a 0 dependency Javascript/Typescript library for traversing object trees. The library includes:
 
 - Functions for recursive processing of nested object trees and directed graphs
-- User defined, type-specific (array/obj/value) callback hooks that get executed during the traversal
+- User defined callback hooks that get executed during the traversal
 - Support for asynchronous callbacks, run either in sequence or in parallel
 - Incremental graph traversal through generators, with full async support
 - A variety of convenience functions, which double as implementation examples for the library
@@ -39,22 +39,20 @@ callback simply prints metadata about the node. We also add a global filter to e
 to `1`.
 
 ```typescript
-import { WalkBuilder } from 'walkjs';
+import { walk, apply } from 'walkjs';
 
 const obj = {
     'a': 1,
     'b': [2, 3],
-    'c': {'d': 5}
+    'c': {'d': 4}
 }
 
-function printNode(node: WalkNode){
-    console.log("obj" + node.getPath(), "=", node.val)
-}
-
-new WalkBuilder()
-    .withSimpleCallback(printNode)
-    .withGlobalFilter(node => node.val !== 1)
-    .walk(obj)
+walk(obj, {
+    callbacks: [{
+        callback: node => console.log("obj" + node.getPath(), "=", node.val),
+        filters: node => node.val !== 1,
+    }]
+})
 ```
 
 outputs:
@@ -71,7 +69,7 @@ obj["c"]["d"] = 4
 Async walks work almost exactly the same as the sync ones, but have an async signature. All callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
 
 ```typescript
-import {AsyncWalkBuilder} from 'walkjs';
+import {walkAsync} from 'walkjs';
 
 const obj = {
     //...
@@ -81,9 +79,11 @@ async function callApi(node: WalkNode): Promise<void> {
     // do some async work here
 }
 
-await new AsyncWalkBuilder()
-    .withSimpleCallback(callApi)
-    .walk(exampleObject)
+await walkAsync(exampleObject, {
+    callbacks: [{
+        callback: callApi
+    }]
+})
 ```
 
 See the reference for more details!
@@ -112,9 +112,7 @@ Throwing an instance of this class within a callback will halt processing comple
 
 ## Configuration:
 
-- `rootObjectCallbacks: boolean`: Ignore callbacks for root objects.
 - `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
-- `runCallbacks: boolean`: Set this to `false` to skip callbacks completely.
 - `callbacks: Callback<T>[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
 - `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
   processing and `breadth` for *breadth-first* processing.
@@ -127,8 +125,6 @@ Throwing an instance of this class within a callback will halt processing comple
 ```typescript
 const defaultConfig = {
     traversalMode: 'depth',
-    rootObjectCallbacks: true,
-    runCallbacks: true,
     graphMode: 'finiteTree',
     parallelizeAsyncCallbacks: false,
     callbacks: []
@@ -154,24 +150,18 @@ const result = new WalkBuilder()
     .withSimpleCallback(logCallback)
     // configured callback
     .withCallback({
-        keyFilters: ['myKey'],
         positionFilter: 'postWalk',
-        nodeTypeFilters: ['object'],
         executionOrder: 0,
         callback: logCallback
     })
     // alternative way to configure callbacks
     .withConfiguredCallback(logCallback)
-        .filteredByKeys('key1', 'key2')
-        .filteredByNodeTypes('object', 'array')
         .filteredByPosition('postWalk')
         .withFilter(node => !!node.parent)
         .withExecutionOrder(1)
         .done()
     .withGraphMode('graph')
     .withTraversalMode('breadth')
-    .withRunningCallbacks(true)
-    .withRootObjectCallbacks(true)
     // execute the walk
     .walk(myObject)
 ```
@@ -183,9 +173,8 @@ Callbacks are a way to execute custom functionality on certain nodes within our 
 ```
 {   
     executionOrder: 0,
-    nodeTypeFilters: ['array'],
-    keyFilters: ['friends'],
     positionFilter: 'preWalk',
+    filters: node => node.nodeType === 'array',
     callback: function(node: NodeType){
         // do things here
     }
@@ -199,10 +188,7 @@ Here are the properties you can define in a callback configuration, most of whic
 - `executionOrder: number`: an integer value for controlling order of callback operations. Lower values run earlier. If
   unspecified, the order will default to 0. Callback stacks are grouped by position and property, so the
   sort will only apply to callbacks in the same grouping.
-- `filters: ((node: WalkNode) => boolean)[]`: A list of functions which will exclude nodes when the result of the function for that node is `false`.
-- `nodeTypeFilters: NodeType[]`: an array of node types to run on. Options are `'array'`, `'object'`, and `'value'`. If unspecified,
-  the callback will run on any node type.
-- `keyFilters: string[]`: an array of key names to run on. The callback will check the key of the property against this list. If unspecified, the callback will run on any key.
+- `filters: (node: WalkNode) => boolean) | ((node: WalkNode) => boolean)[]`: A function or list of functions which will exclude nodes when the result of the function for that node is `false`.
 - `positionFilter: PositionType`: The position the traversal to run on -- think of this as when it should execute.
   Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the only difference here is whether the callback is invoked prior to yielding the node. However when running in `'depth'` mode, `'postWalk'` callbacks for a node will run *after all the callbacks of its children*. For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postWalk'` callbacks to run in the following order: `c`, `d`, `b`, `a`.
  
