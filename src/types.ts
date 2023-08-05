@@ -40,11 +40,6 @@ export type Config<T extends CallbackFn> = {
 
 export type Callback<T extends CallbackFn> = Partial<_Callback<T>>
 
-export type PartialConfig<T extends CallbackFn> = {
-    traversalMode?: TraversalMode
+export type PartialConfig<T extends CallbackFn> = Partial<Omit<Config<T>, 'callbacks'>> & {
     callbacks?: Callback<T>[]
-    graphMode?: GraphMode
-    rootObjectCallbacks?: boolean
-    runCallbacks?: boolean
-    parallelizeAsyncCallbacks?: boolean
-}
+};
