@@ -12,8 +12,16 @@ type NodeComparison = {
 
 const defaultFormatter: NodePathSegmentFormatter = ({key, isArrayMember: isArr}) => isArr ? `[${key}]` : `.${key}`
 
-export function compare(a: object, b: object, leavesOnly = false, formatter: NodePathSegmentFormatter = defaultFormatter): NodeComparison[] {
+export type NodeComparisonFn = (a: WalkNode, b: WalkNode) => boolean;
 
+export function compare(
+    a: object,
+    b: object,
+    leavesOnly = false,
+    formatter: NodePathSegmentFormatter = defaultFormatter,
+    nodeComparison: NodeComparisonFn = (a, b) => Object.is(a.val, b.val)
+): NodeComparison[]
+{
     const aNodes: { [key: string]: WalkNode } = {}
     const bNodes: { [key: string]: WalkNode } = {}
 
@@ -30,7 +38,7 @@ export function compare(a: object, b: object, leavesOnly = false, formatter: Nod
             const bNode = bNodes[key];
             const removed = aNode && !bNode;
             const added = bNode && !aNode;
-            const changed = aNode && bNode && !Object.is(aNode.val, bNode.val)
+            const changed = aNode && bNode && !nodeComparison(aNode, bNode)
             let delta: NodeComparison = {
                 path: key,
                 hasDifference: removed || added || changed
