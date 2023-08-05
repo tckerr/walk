@@ -3,7 +3,7 @@ import {_Callback, CallbackFn, Context, IOrderable, PartialConfig} from "./types
 function executionOrderSort<T extends IOrderable>(a: T, b: T) {
     const _a = a.executionOrder || 0;
     const _b = b.executionOrder || 0;
-    return _a < _b ? -1 : _a > _b ? 1 : 0;
+    return _a - _b;
 }
 
 function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
@@ -15,8 +15,6 @@ function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Co
         },
         config: {
             traversalMode: typeof config.traversalMode !== 'undefined' ? config.traversalMode : 'depth',
-            rootObjectCallbacks: typeof config.rootObjectCallbacks !== 'undefined' ? config.rootObjectCallbacks : true,
-            runCallbacks: typeof config.runCallbacks !== 'undefined' ? config.runCallbacks : true,
             graphMode: typeof config.graphMode !== 'undefined' ? config.graphMode : 'finiteTree',
             parallelizeAsyncCallbacks: typeof config.parallelizeAsyncCallbacks !== 'undefined' ? config.parallelizeAsyncCallbacks : false,
             callbacks: typeof config.callbacks !== 'undefined' ? config.callbacks
@@ -24,8 +22,6 @@ function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Co
                 .map(cb =>
                 ({
                     callback: cb.callback!,
-                    keyFilters: typeof cb.keyFilters === 'undefined' ? [] : (Array.isArray(cb.keyFilters) ? cb.keyFilters : [cb.keyFilters]),
-                    nodeTypeFilters: typeof cb.nodeTypeFilters === 'undefined' ? [] : (Array.isArray(cb.nodeTypeFilters) ? cb.nodeTypeFilters : [cb.nodeTypeFilters]),
                     executionOrder: typeof cb.executionOrder === 'undefined' ? 0 : cb.executionOrder,
                     filters: typeof cb.filters === 'undefined' ? [] : (Array.isArray(cb.filters) ? cb.filters : [cb.filters]),
                     positionFilter: typeof cb.positionFilter === 'undefined' ? 'preWalk' : cb.positionFilter

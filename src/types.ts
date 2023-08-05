@@ -23,9 +23,7 @@ export type Context<T extends CallbackFn> = {
 export type _Callback<T extends CallbackFn> = IOrderable & {
     executionOrder: number,
     positionFilter: PositionType
-    keyFilters: string[],
-    nodeTypeFilters: NodeType[]
-    filters: NodeFilterFn[]
+    filters: NodeFilterFn[] | NodeFilterFn
     callback: T
 }
 
@@ -33,8 +31,6 @@ export type Config<T extends CallbackFn> = {
     traversalMode: TraversalMode
     callbacks: _Callback<T>[]
     graphMode: GraphMode
-    rootObjectCallbacks: boolean
-    runCallbacks: boolean
     parallelizeAsyncCallbacks: boolean
 }
 

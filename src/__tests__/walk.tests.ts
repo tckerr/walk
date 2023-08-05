@@ -3,39 +3,73 @@ import {Break} from "../index";
 import {WalkNode} from "../node";
 
 describe("walk", () => {
+    it("README example", () => {
+        const obj = {
+            'a': 1,
+            'b': [2, 3],
+            'c': {'d': 4}
+        }
+        const results: any[] = [];
+        walk(obj, {
+            callbacks: [{
+                callback: node => results.push(["obj" + node.getPath(), "=", node.val]),
+                filters: node => node.val !== 1,
+            }]
+        })
+        expect(results).toEqual([
+            [`obj`, '=', { a: 1, b: [ 2, 3 ], c: { d: 4 } },],
+            [`obj["b"]`, '=', [ 2, 3 ],],
+            [`obj["b"][0]`, '=', 2,],
+            [`obj["b"][1]`, '=', 3,],
+            [`obj["c"]`, '=', { d: 4 },],
+            [`obj["c"]["d"]`, '=', 4,],
+        ])
+    });
+
     it("works with undefined root", () => {
         let count = 0;
-        walk(undefined, {callbacks:[{
-            filters: [n => typeof n.val === 'undefined'],
-            callback: () => ++count}
-        ]})
+        walk(undefined, {
+            callbacks: [{
+                filters: n => typeof n.val === 'undefined',
+                callback: () => ++count
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
     it("works with NaN root", () => {
         let count = 0;
-        walk(NaN, {callbacks:[{
-            filters: [n => isNaN(n.val)],
-            callback: () => ++count}
-        ]})
+        walk(NaN, {
+            callbacks: [{
+                filters: n => isNaN(n.val),
+                callback: () => ++count
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
     it("works with null root", () => {
         let count = 0;
-        walk(null, {callbacks:[{
-            filters: [n => n.val === null],
-            callback: () => ++count}
-        ]})
+        walk(null, {
+            callbacks: [{
+                filters: n => n.val === null,
+                callback: () => ++count
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
-    it("works with array root",  () => {
+    it("works with array root", () => {
         let count = 0;
-        walk([0], {callbacks:[{
-            nodeTypeFilters: ['array'],
-            callback: () => ++count}
-        ]})
+        walk([0], {
+            callbacks: [{
+                callback: (n) => count += n.nodeType === 'array' ? 1 : 0
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
@@ -44,20 +78,18 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            rootObjectCallbacks: false,
-            callbacks: [{callback: (n) => count++}]
+            callbacks: [{callback: (n) => count++, filters: n => !n.isRoot}]
         })
 
         expect(count).toEqual(0);
     });
 
     it("ignores all callbacks", () => {
-        const data = {person:{name:"Bob"}}
+        const data = {person: {name: "Bob"}}
 
         let count = 0;
         walk(data, {
-            runCallbacks: false,
-            callbacks: [{callback: (n) => count++}]
+            callbacks: [{callback: (n) => count++, filters: () => false}]
         })
 
         expect(count).toEqual(0);
@@ -73,7 +105,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                keyFilters: ['name'],
+                filters: n => n.key === 'name',
                 callback: () => count++
             }]
         })
@@ -92,8 +124,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                nodeTypeFilters: ['array'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }]
         })
 
@@ -111,8 +142,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                nodeTypeFilters: ['object'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'object' ? 1 : 0
             }]
         })
 
@@ -130,8 +160,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                nodeTypeFilters: ['value'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'value' ? 1 : 0
             }]
         })
 
@@ -150,8 +179,8 @@ describe("walk", () => {
         walk(data, {
             callbacks: [{
                 positionFilter: 'both',
-                keyFilters: ['name'],
-                callback: (n) => count++
+                filters: n => n.key === 'name',
+                callback: () => count++
             }]
         })
 
@@ -170,12 +199,12 @@ describe("walk", () => {
         walk(data, {
             callbacks: [
                 {
-                    keyFilters: ['name'],
+                    filters: n => n.key === 'name',
                     executionOrder: 1,
                     callback: (n) => result.push('second')
                 },
                 {
-                    keyFilters: ['name'],
+                    filters: n => n.key === 'name',
                     executionOrder: 0,
                     callback: (n) => result.push('first')
                 }
@@ -211,7 +240,8 @@ describe("walk", () => {
 
         walk(data, {
             callbacks: [{
-                keyFilters: ['person'], callback: (n) => {
+                filters: n => n.key === 'person',
+                callback: (n) => {
                     expect(n.key).toBe('person')
                     expect(n.val).toEqual({name: 'Bob'})
                     expect(n.getPath()).toEqual('[\"person\"]')
@@ -234,7 +264,8 @@ describe("walk", () => {
 
         walk(data, {
             callbacks: [{
-                keyFilters: ['name'], callback: (n) => {
+                filters: n => n.key === 'name',
+                callback: (n) => {
                     expect(n.key).toBe('name')
                     expect(n.val).toEqual('Bob')
                     expect(n.getPath()).toEqual('[\"person\"][\"name\"]')
@@ -257,7 +288,8 @@ describe("walk", () => {
 
         walk(data, {
             callbacks: [{
-                keyFilters: ['people'], callback: (n) => {
+                filters: [n => n.key === 'people'],
+                callback: (n) => {
                     expect(n.key).toBe('people')
                     expect(n.val).toEqual(['Bob'])
                     expect(n.getPath()).toEqual('[\"people\"]')
@@ -308,12 +340,10 @@ describe("walk", () => {
             callbacks: [
                 {
                     executionOrder: 0,
-                    nodeTypeFilters: ['value'],
-                    callback: () => count++
+                    callback: (n) => count += n.nodeType === 'value' ? 1 : 0
                 },
                 {
                     executionOrder: 1,
-                    nodeTypeFilters: ['value'],
                     callback: (n: WalkNode) => {
                         if (n.executedCallbacks.length > 0)
                             return;
@@ -471,7 +501,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             callbacks: [{
-                filters: [(n) => n.val === 'Fido'],
+                filters: n => n.val === 'Fido',
                 callback: () => count++
             }]
         })
@@ -493,7 +523,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             graphMode: 'finiteTree',
-            callbacks:[{callback: () => ++count}]
+            callbacks: [{callback: () => ++count}]
         })
 
         expect(count).toEqual(7)

@@ -10,39 +10,49 @@ describe("walkAsync", () => {
 
     it("works with undefined root", async () => {
         let count = 0;
-        await walkAsync(undefined, {callbacks:[{
-            filters: [n => typeof n.val === 'undefined'],
-            callback: () => ++count}
-        ]})
+        await walkAsync(undefined, {
+            callbacks: [{
+                filters: n => typeof n.val === 'undefined',
+                callback: () => ++count
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
     it("works with NaN root", async () => {
         let count = 0;
-        await walkAsync(NaN, {callbacks:[{
-            filters: [n => isNaN(n.val)],
-            callback: () => ++count}
-        ]})
+        await walkAsync(NaN, {
+            callbacks: [{
+                filters: n => isNaN(n.val),
+                callback: () => ++count
+            }
+            ]
+        })
         expect(count).toEqual(1);
     });
 
     it("works with null root", async () => {
         let count = 0;
-        await walkAsync(null, {callbacks:[{
-            filters: [n => n.val === null],
-            callback: () => ++count}
-        ]})
+        await walkAsync(null, {
+            callbacks: [{
+                filters: n => n.val === null,
+                callback: () => ++count
+            }]
+        })
         expect(count).toEqual(1);
     });
 
     it("works with array root", async () => {
         let count = 0;
-        await walkAsync([0], {callbacks:[{
-            nodeTypeFilters: ['array'],
-            callback: () => ++count}
-        ]})
+        await walkAsync([0], {
+            callbacks: [{
+                callback: (n) => count += n.nodeType === 'array' ? 1 : 0
+            }]
+        })
         expect(count).toEqual(1);
-    });
+    })
+    ;
 
     it("runs once per node filtered by key", async () => {
         const data = {
@@ -54,7 +64,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                keyFilters: ['name'],
+                filters: n => n.key === 'name',
                 callback: async (n) => {
                     await timeout(10);
                     count++
@@ -76,8 +86,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                nodeTypeFilters: ['array'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }]
         })
 
@@ -95,8 +104,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                nodeTypeFilters: ['object'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'object' ? 1 : 0
             }]
         })
 
@@ -114,8 +122,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                nodeTypeFilters: ['value'],
-                callback: (n) => count++
+                callback: (n) => count += n.nodeType === 'value' ? 1 : 0
             }]
         })
 
@@ -134,7 +141,7 @@ describe("walkAsync", () => {
         await walkAsync(data, {
             callbacks: [{
                 positionFilter: 'both',
-                keyFilters: ['name'],
+                filters: n => n.key === 'name',
                 callback: (n) => count++
             }]
         })
@@ -154,14 +161,14 @@ describe("walkAsync", () => {
         await walkAsync(data, {
             callbacks: [
                 {
-                    keyFilters: ['name'],
+                    filters: n => n.key === 'name',
                     executionOrder: 1,
                     callback: () => result.push('second')
                 },
                 {
-                    keyFilters: ['name'],
+                    filters: n => n.key === 'name',
                     executionOrder: 0,
-                    callback: async () =>{
+                    callback: async () => {
                         await timeout(10)
                         result.push('first')
                     }
@@ -198,7 +205,8 @@ describe("walkAsync", () => {
 
         await walkAsync(data, {
             callbacks: [{
-                keyFilters: ['person'], callback: (n) => {
+                filters: n => n.key === 'person',
+                callback: (n) => {
                     expect(n.key).toBe('person')
                     expect(n.val).toEqual({name: 'Bob'})
                     expect(n.getPath()).toEqual('[\"person\"]')
@@ -221,7 +229,8 @@ describe("walkAsync", () => {
 
         await walkAsync(data, {
             callbacks: [{
-                keyFilters: ['name'], callback: (n) => {
+                filters: n => n.key === 'name',
+                callback: (n) => {
                     expect(n.key).toBe('name')
                     expect(n.val).toEqual('Bob')
                     expect(n.getPath()).toEqual('[\"person\"][\"name\"]')
@@ -244,7 +253,8 @@ describe("walkAsync", () => {
 
         await walkAsync(data, {
             callbacks: [{
-                keyFilters: ['people'], callback: (n) => {
+                filters: n => n.key === 'people',
+                callback: (n) => {
                     expect(n.key).toBe('people')
                     expect(n.val).toEqual(['Bob'])
                     expect(n.getPath()).toEqual('[\"people\"]')
@@ -295,12 +305,10 @@ describe("walkAsync", () => {
             callbacks: [
                 {
                     executionOrder: 0,
-                    nodeTypeFilters: ['value'],
-                    callback: () => count++
+                    callback: (n) => count += n.nodeType === 'value' ? 1 : 0
                 },
                 {
                     executionOrder: 1,
-                    nodeTypeFilters: ['value'],
                     callback: (n: WalkNode) => {
                         if (n.executedCallbacks.length > 0)
                             return;
@@ -368,7 +376,7 @@ describe("walkAsync", () => {
                 }]
             })
             expect(false).toBeTruthy()
-        } catch (e){
+        } catch (e) {
             expect(e).toBeTruthy()
 
         }
@@ -462,7 +470,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             callbacks: [{
-                filters: [(n) => n.val === 'Fido'],
+                filters: (n) => n.val === 'Fido',
                 callback: () => count++
             }]
         })
@@ -470,7 +478,7 @@ describe("walkAsync", () => {
         expect(count).toEqual(1)
     })
 
-    it("doesn't consider null, NaN, or undefined the same ref in finite tree mode",  async() => {
+    it("doesn't consider null, NaN, or undefined the same ref in finite tree mode", async () => {
 
         const data = {
             a: null,
@@ -484,7 +492,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             graphMode: 'finiteTree',
-            callbacks:[{callback: () => ++count}]
+            callbacks: [{callback: () => ++count}]
         })
 
         expect(count).toEqual(7)
