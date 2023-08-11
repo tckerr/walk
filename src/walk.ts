@@ -34,9 +34,9 @@ class Walker<T extends CallbackFn> {
     shouldSkipVisitation(node: WalkNode): boolean {
         if (!node.canBeCompared())
             return false;
-        const {objectHasBeenSeen, registerObjectVisit} = this.ctx.config.visitationRegister;
-        if(!objectHasBeenSeen(node))
-            registerObjectVisit(node)
+        const vr = this.ctx.config.visitationRegister;
+        if(!vr.objectHasBeenSeen(node))
+            vr.registerObjectVisit(node)
         else if (this.ctx.config.graphMode === 'graph')
             return true
         else if (this.ctx.config.graphMode === 'finiteTree')

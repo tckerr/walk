@@ -11,7 +11,7 @@
         - [Builder](#using-the-builder)
     - [Callbacks](#callbacks)
     - [Nodes](#nodes)
-5. [Extra functions](#extra-functions)
+5. [Extra utilities](#extra-functions)
     - [Apply](#apply)
     - [Deep copy](#deep-copy)
     - [Compare](#compare)
@@ -33,12 +33,10 @@ Walk is a 0 dependency Javascript/Typescript library for traversing object trees
 
 # Quickstart
 
-Below is a simple example of usage, in which we execute a single callback for each node in the object graph. The 
-callback simply prints metadata about the node. We also add a global filter to exclude any nodes whose value is equal
-to `1`.
+Below is a simple example of usage, in which we execute a single callback for each node in the object graph. The  callback simply prints metadata about the node. We also add a global filter to exclude any nodes whose value is equal to `1`.
 
 ```typescript
-import { walk } from 'walkjs';
+import {walk} from 'walkjs';
 
 const obj = {
     'a': 1,
@@ -55,7 +53,7 @@ walk(obj, {
 ```
 
 outputs:
-```javascript
+```text
 obj = { a: 1, b: [ 2, 3 ], c: { d: 4 } }
 obj["b"] = [ 2, 3 ]
 obj["b"][0] = 2
@@ -63,6 +61,7 @@ obj["b"][1] = 3
 obj["c"] = { d: 4 }
 obj["c"]["d"] = 4
 ```
+
 ## Async
 
 Async walks work almost exactly the same as the sync ones, but have an async signature. All callbacks will be awaited, and therefore still run in sequence. For the async versions below, callback functions may either return `Promise<void>` or `void`;
@@ -74,14 +73,12 @@ const obj = {
     //...
 }
 
-async function callApi(node: WalkNode): Promise<void> {
-    // do some async work here
-}
-
 await walkAsync(exampleObject, {
-    onVisit: [{
-        callback: callApi
-    }]
+    onVisit: {
+        callback: async function callApi(node: WalkNode): Promise<void> {
+            // do some async work here
+        }
+    }
 })
 ```
 
@@ -89,47 +86,58 @@ See the reference for more details!
 
 # Reference
 
-`walk(target: any, config: Config<Callback>): void`
-
-The primary method for traversing an object and injecting callbacks into the traversal. 
-
-`walkAsync(target: any, config: Config<AsyncCallback>): Promise<void>`
-
-Async version of `walk` which returns a promise.
-
-## Halting the walk
-
 ```typescript
-import {apply, Break} from "walkjs";
+// The primary method for traversing an object and injecting callbacks into the traversal. 
+function walk(target: any, config: Config<Callback>): void {/*...*/}
 
-// the walk will not process for any nodes after this
-apply({}, () => throw new Break())
-
+// Async version of `walk` which returns a promise.
+function walkAsync(target: any, config: Config<AsyncCallback>): Promise<void>  {/*...*/}
 ```
-
-Throwing an instance of this class within a callback will halt processing completely. This allows for early exit, usually for circular graphs or in cases when you no longer need to continue.
 
 ## Configuration:
 
-- `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
-- `onVisit: OneOrMany<Callback<T>>`: an array of callback objects. See the [Callback](#callbacks) section for more information.
-- `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
-  processing and `breadth` for *breadth-first* processing.
-- `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
-  setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once, determined by set membership of the WalkNode's `val`. Graphs will only process object/array references one time. Infinite trees will always process nodes -- use `throw new Break()` to end the processing manually. *Warning:
-  infinite trees will never complete processing if a callback doesn't `throw new Break()`.*
-- `visitationRegister: NodeVisitationRegister`: As mentioned in the `graphMode` config option, walk uses a set membership on the node's `val` to determine whether a node has been visited (for arrays and objects only). This setting can be overridden to change that behavior.
-- `trackExecutedCallbacks: boolean`: set to `false` to prevent tracking which callbacks have been invoked on a node. `WalkNode.executedCallbacks` will always be empty if this is set to `false`. This may help with memory management for larger objects.
+```typescript
+type Config<T> = {
+    // (Only applies to async variations). If set to true, the walk will ignore `Callback.executionOrder` and instead 
+    // run all async callbacks in parallel. However callbacks will still be grouped by `preVisit` or `postVisit`.
+    parallelizeAsyncCallbacks: boolean;
+
+    // One or many callback objects. See the Callbacks section for more information.
+    onVisit: OneOrMany<Callback<T>>;
+
+    // the mode for traversing the tree. Options are `depth` for *depth-first* processing and `breadth` for 
+    // *breadth-first* processing.
+    traversalMode: 'depth' | 'breadth';
+
+    // if the object that gets passed in doesn't comply with this configuration setting, an error will occur. 
+    // Finite trees will error if an object/array reference is encountered more than once, determined by set membership 
+    // of the WalkNode's `val`. Graphs will only process object/array references one time. Infinite trees will always 
+    // process nodes -- use `throw new Break()` to end the processing manually. *Warning: infinite trees will never 
+    // complete processing if a callback doesn't `throw new Break()`.*
+    graphMode: 'finiteTree' | 'graph' | 'infinite';
+
+    // As mentioned in the `graphMode` config option, walk uses a set membership on the node's `val` to determine 
+    // whether a node has been visited (for arrays and objects only). This setting can be overridden to change that 
+    // behavior.
+    visitationRegister: NodeVisitationRegister;
+
+    // set to `false` to prevent tracking which callbacks have been invoked on a node. `WalkNode.executedCallbacks` 
+    // will always be empty if this is set to `false`. This may help with memory management for larger objects.
+    trackExecutedCallbacks: boolean;
+}
+```
+
 
 ### Config Defaults
 
 ```typescript
-const defaultConfig = {
-    traversalMode: 'depth',
-    graphMode: 'finiteTree',
-    parallelizeAsyncCallbacks: false,
-    onVisit: [],
-    trackExecutedCallbacks: true
+const defaultConfig: Config<T> = {
+   traversalMode: 'depth',
+   graphMode: 'finiteTree',
+   parallelizeAsyncCallbacks: false,
+   onVisit: [],
+   trackExecutedCallbacks: true,
+   visitationRegister: SetVisitationRegister
 }
 ```
 
@@ -137,148 +145,204 @@ const defaultConfig = {
 
 An alternative way to configure a walk is to use either the `WalkBuilder` or `AsyncWalkBuilder`.
 
-Call `WalkBuilder.walk(target: any)` to execute the walk with the builder's configuration. 
-
+Call `WalkBuilder.walk(target: any)` to execute the walk with the builder's configuration.
 
 Example:
 ```typescript
-import { WalkBuilder } from 'walkjs';
+import {WalkBuilder} from 'walkjs';
 
 const logCallback = (node: WalkNode) => console.log(node);
 const myObject = {}
 
 const result = new WalkBuilder()
-    // runs for every node
-    .withSimpleCallback(logCallback)
-    // configured callback
-    .withCallback({
-        timing: 'postVisit',
-        executionOrder: 0,
-        callback: logCallback
-    })
-    // alternative way to configure callbacks
-    .withConfiguredCallback(logCallback)
-        .withTiming('postVisit')
-        .withFilter(node => !!node.parent)
-        .withExecutionOrder(1)
-        .done()
-    .withGraphMode('graph')
-    .withTraversalMode('breadth')
-    // execute the walk
-    .walk(myObject)
+        // runs for every node
+        .withSimpleCallback(logCallback)
+        // configured callback
+        .withCallback({
+           timing: 'postVisit',
+           executionOrder: 0,
+           callback: logCallback
+        })
+        // alternative way to configure callbacks
+        .withConfiguredCallback(logCallback)
+           .withTiming('postVisit')
+           .withFilter(node => !!node.parent)
+           .withExecutionOrder(1)
+           .done()
+        .withGraphMode('graph')
+        .withTraversalMode('breadth')
+        // execute the walk
+        .walk(myObject)
 ```
 
 ## Callbacks
 
-Callbacks are a way to execute custom functionality on certain nodes within our object tree. The general form of a callback object is:
+Callbacks are a way to execute custom functionality on certain nodes within our object tree.
+
+```typescript
+type Callback<T extends (node: WalkNode) => void> = {
+    // The function to run when the node is visited. The callback function will be passed a single argument: a 
+    // `WalkNode` object (see the Nodes section for more detail). For async functions, `callback` may alternatively 
+    // return a `Promise<void>`, in which case it will be awaited.
+    callback: T;
+
+    // When the callback will execute. Options are `'preVisit'` (before any list/object is traversed), and `'postVisit'`
+    // (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the 
+    // only difference here is whether the callback is invoked prior to yielding the node. However when running in 
+    // `'depth'` mode, `'postVisit'` callbacks for a node will run *after all the callbacks of its children*. 
+    //
+    // For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postVisit'` callbacks to run in the 
+    // following order: `c`, `d`, `b`, `a`.
+    timing?: CallbackTiming;
+
+    // an integer value for controlling order of callback operations. Lower values run earlier. Callback stacks are 
+    // grouped by timing and property, so the sort will only apply to callbacks in the same grouping.
+    executionOrder?: number;
+
+    // A function or list of functions which will exclude nodes when the result of the function for that 
+    // node is `false`.
+    filters?: ((node: WalkNode) => boolean) | ((node: WalkNode) => boolean)[];
+}
 
 ```
-{   
-    executionOrder: 0,
+
+### Callback Defaults
+
+```typescript
+const defaultCallback: Callback = {
     timing: 'preVisit',
-    filters: node => node.nodeType === 'array',
-    callback: function(node: NodeType){
-        // do things here
-    }
+    executionOrder: 0,
+    filters: []
 }
 ```
-
-Here are the properties you can define in a callback configuration, most of which act as filters:
-
-- `callback: (node: WalkNode) => void`: the actual function to run. Your callback function will be passed a single argument: a `WalkNode` object (
-  see the Nodes section for more detail). succession. If unspecified, the callback will run `'preVisit'`. For async functions, `callback` may alternatively return a `Promise<void>`, in which case it will be awaited.
-- `executionOrder: number`: an integer value for controlling order of callback operations. Lower values run earlier. If
-  unspecified, the order will default to 0. Callback stacks are grouped by position and property, so the
-  sort will only apply to callbacks in the same grouping.
-- `filters: (node: WalkNode) => boolean) | ((node: WalkNode) => boolean)[]`: A function or list of functions which will exclude nodes when the result of the function for that node is `false`.
-- `timing: CallbackTiming`: When the callback will execute.
-  Options are `'preVisit'` (before any list/object is traversed), and `'postVisit'` (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the only difference here is whether the callback is invoked prior to yielding the node. However when running in `'depth'` mode, `'postVisit'` callbacks for a node will run *after all the callbacks of its children*. For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postVisit'` callbacks to run in the following order: `c`, `d`, `b`, `a`.
- 
 
 ## Nodes
 
 `WalkNode` objects represent a single node in the tree, providing metadata about the value, its parents, siblings, and children. Nodes have the following properties:
 
-- `key: string|number`: The key of this property as defined on its parent. For example, if this callback is running on
-  the `'weight'` property of a `person`, the `key` would be `'weight'`. This will
-  be the numerical index for members in arrays.
-- `val: any`: The value of the property. To use the above example, the value would be something like `183`.
-- `nodeType: NodeType`: The type of node the property is. Possible `NodeType` are `'array' | 'object' | 'value'`.
-- `isRoot: boolean`: A boolean that is set to `true` if the property is a root object, otherwise `false`.
-- `executedCallbacks: Callback[]`: An array of all callback functions that have already run on this property. The current function will *not* be in the list.
-- `getPath(pathFormat?: (node: WalkNode) => string)` The path to the value, formatted with the optional formatter passed in. For example, if the variable you're walking is named `myObject`, the path will
-  look something like `["friends"][10]["friends"][2]["name"]`, such that
-  calling `myObject["friends"][10]["friends"][2]["name"]` will return the `val`. The `pathFormat` parameter should take a node and return the path segment for only that node; since `getPath` will automatically prepend the path of the node's parent as well.
-- `parent: WalkNode`: The node under which the property exists. `node.parent` is another instance of node, and will have all the same properties.
-- `children: WalkNode[]`: A list of all child nodes.
-- `siblings: WalkNode[]`: A list of all sibling nodes (nodes which share a parent).
-- `descendants: WalkNode[]`: A list of all descendant nodes (recursively traversing children).
-- `ancestors: WalkNode[]`: A list of nodes formed by recursively traversing parents back to the root.
+```typescript
+type WalkNode = {
+   // The key of this property as defined on its parent. For example, if this callback is running on the `'weight'` 
+   // property of a `person`, the `key` would be `'weight'`. This will be the numerical index for members in arrays.
+   key: string | number;
 
-# Extra functions
+   // The value of the property. To use the above example, the value would be something like `183`.
+   val: any;
+
+   //Possible `NodeType` are `'array' | 'object' | 'value'`. Objects and arrays will be traversed, while values are 
+   // leaf nodes.
+   nodeType: NodeType;
+
+   // Will be set to `true` if the property is a root object, otherwise `false`.
+   isRoot: boolean;
+
+   // An array of all callback functions that have already run on this property. The current function will *not* be 
+   // in the list. Tracking this can be disabled in the config.
+   executedCallbacks: Callback[];
+
+   // The fully qualified path to the value, formatted with the optional formatter passed in. For example, if the 
+   // variable being walked is named `myObject`, the path will look something like 
+   // `["friends"][10]["friends"][2]["name"]`, such that calling `myObject["friends"][10]["friends"][2]["name"]` 
+   // will return the `val`. The `pathFormat` parameter should take a node and return the path segment for only that 
+   // node since `getPath` will automatically prepend the path of the node's parent as well.
+   getPath(pathFormat?: (node: WalkNode) => string);
+
+   // The node under which the property exists. `node.parent` is another instance of node, and will have all the same 
+   // properties.
+   parent: WalkNode;
+
+   // A list of all child nodes.
+   children: WalkNode[];
+
+   // A list of all sibling nodes (nodes which share a parent).
+   siblings: WalkNode[];
+
+   // A list of all descendant nodes (recursively traversing children).
+   descendants: WalkNode[];
+
+   // A list of nodes formed by recursively traversing parents back to the root.
+   ancestors: WalkNode[];
+}
+
+```
+
+## Halting the walk
+
+Throwing an instance of "Break" within a callback will halt processing completely. This allows for early exit, usually in cases such as processing circular graphs or when you simply no longer need to continue.
+
+Example:
+
+```typescript
+import {apply, Break} from "walkjs";
+
+apply([1, 2, 3], ({val}) => {
+    if(val === 2)
+       throw new Break()
+})
+```
+
+# Extra utilities
 
 Walk has some extra utility functions built-in that you may find useful.
 
 ## Apply
 
+A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
 
 ```typescript
-apply(
+function apply(
     target: any, 
     ...onVisit: ((node: NodeType) => void)[]
-): void
+): void {/*...*/}
     
-applyAsync(
+function applyAsync(
     target: any, 
     ...onVisit: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
-): Promise<void>
+): Promise<void> {/*...*/}
 ```
 
-A shorthand version of `walk()` that runs the supplied callbacks for all nodes.
 
 ## Deep copy
 
-```typescript
-deepCopy(target: object) : object
-```
-
 Returns a deep copy of an object, with all array and object references replaced with new objects/arrays.
+
+```typescript
+function deepCopy(target: object) : object { /*...*/ }
+```
 
 ## Compare
 
+Computes a deep comparison between objects `a` and `b` based on the keys of each node:
+
 ```typescript
-compare(
+type NodeComparison = {
+   path: string,
+   a?: any
+   b?: any
+   hasDifference: boolean,
+   difference?: 'added' | 'removed' | {before: any, after: any}
+}
+
+function compare(
     a: any, 
     b: any, 
     leavesOnly=false, 
     formatter: NodePathSegmentFormatter=defaultFormatter,
     nodeComparison: NodeComparisonFn = (a, b) => Object.is(a.val, b.val)
-): NodeComparison
-```
-
-This method does a deep comparison between objects `a` and `b` based on the keys of each node. It returns an array of the following type:
-
-```typescript
-type NodeComparison = {
-    path: string,
-    a?: any
-    b?: any
-    hasDifference: boolean,
-    difference?: 'added' | 'removed' | {before: any, after: any}
-}
+): NodeComparison  {/*...*/}
 ```
 
 ## Reduce
 
+Accumulates a value of type T, starting with `initialValue`, by invoking `fn` on each node in `source` and adding the result to the accumulated value T.
+
 ```typescript
-reduce(
+function reduce(
     source: object, 
     initialValue: T, 
     fn: (accumulator: T, node: WalkNode) => T
-): T
+): T  {/*...*/}
 ```
-
-This function accumulates a value of type T, starting with `initialValue`, by invoking `fn` on each node in `source` and adding the result to the accumulated value T.
 
 # Running walk as a generator
 
@@ -299,4 +363,4 @@ for await (const node of walkAsyncStep(obj, config))
 
 ```
 
-`preVisit` callbacks are invoked prior to yielding a node, and `postVisit` callbacks after.
+Note: `preVisit` callbacks are invoked prior to yielding a node, and `postVisit` callbacks after.

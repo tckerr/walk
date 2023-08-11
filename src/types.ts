@@ -20,7 +20,6 @@ export const asMany = <T>(p: OneOrMany<T>): T[] => isMany(p) ? p : [p]
 
 export type Context<T extends CallbackFn> = {
     config: Config<T>
-    seenObjects: Set<any>
     callbacksByPosition: { [key: string]: Callback<T>[] }
 }
 

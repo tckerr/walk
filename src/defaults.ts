@@ -1,4 +1,5 @@
-import {Callback, asMany, CallbackFn, Context, PartialConfig} from "./types";
+import {Callback, asMany, CallbackFn, Context, PartialConfig, NodeVisitationRegister} from "./types";
+import {WalkNode} from "./node";
 
 function executionOrderSort<T extends {executionOrder?: number}>(a: T, b: T) {
     const _a = a.executionOrder || 0;
@@ -6,20 +7,27 @@ function executionOrderSort<T extends {executionOrder?: number}>(a: T, b: T) {
     return _a - _b;
 }
 
+export class SetVisitationRegister implements NodeVisitationRegister{
+    public readonly seenObjects: Set<any> = new Set<any>();
+
+    public objectHasBeenSeen(node: WalkNode): boolean {
+        return this.seenObjects.has(node.val);
+    }
+
+    public registerObjectVisit(node: WalkNode): void {
+        this.seenObjects.add(node.val);
+    }
+}
+
 function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
-    const seenObjects = new Set<any>();
     return {
-        seenObjects,
         callbacksByPosition: {
             preVisit: [],
             postVisit: []
         },
         config: {
             trackExecutedCallbacks: true,
-            visitationRegister: config.visitationRegister ?? {
-                objectHasBeenSeen: n => seenObjects.has(n.val),
-                registerObjectVisit: n => seenObjects.add(n.val)
-            },
+            visitationRegister: config.visitationRegister || new SetVisitationRegister(),
             traversalMode: config.traversalMode ?? 'depth',
             graphMode: config.graphMode ?? 'finiteTree',
             parallelizeAsyncCallbacks: config.parallelizeAsyncCallbacks ?? false,
