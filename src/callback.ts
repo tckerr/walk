@@ -1,25 +1,27 @@
-import {_Callback, AsyncCallbackFn, CallbackFn, Context, PositionType} from "./types";
+import {Callback, asMany, AsyncCallbackFn, CallbackFn, Context, CallbackTiming} from "./types";
 import {WalkNode} from "./node";
 
-function filterByFilters<T extends CallbackFn>(cb: _Callback<T>, node: WalkNode) {
-    return Array.isArray(cb.filters) ? cb.filters.every(f => f(node)) : cb.filters(node)
+function filterByFilters<T extends CallbackFn>(cb: Callback<T>, node: WalkNode) {
+    return asMany(cb.filters).every(f => f(node));
 }
 
-function execCallbacks(callbacks: _Callback<CallbackFn>[], node: WalkNode): void {
+function execCallbacks(callbacks: Callback<CallbackFn>[], node: WalkNode, enableExecutedCallbacks: boolean): void {
     for (let cb of callbacks) {
         cb.callback(node)
-        node.executedCallbacks.push(cb);
+        if (enableExecutedCallbacks)
+            node.executedCallbacks.push(cb);
     }
 }
 
-async function execCallbacksAsync(callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> {
+async function execCallbacksAsync(callbacks: Callback<AsyncCallbackFn>[], node: WalkNode, enableExecutedCallbacks: boolean): Promise<void> {
     for (let cb of callbacks) {
         await cb.callback(node)
-        node.executedCallbacks.push(cb);
+        if (enableExecutedCallbacks)
+            node.executedCallbacks.push(cb);
     }
 }
 
-const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> => {
+const execCallbacksAsyncInParallel = async (callbacks: Callback<AsyncCallbackFn>[], node: WalkNode): Promise<void> => {
     await Promise.all(
         callbacks.map(cb =>
             Promise.resolve(cb.callback(node))
@@ -32,7 +34,7 @@ const execCallbacksAsyncInParallel = async (callbacks: _Callback<AsyncCallbackFn
 
 export class _CallbackStacker<T extends CallbackFn, Rt> {
 
-    constructor(private ctx: Context<T>, private executor: (callbacks: _Callback<T>[], node: WalkNode) => Rt) {
+    constructor(private ctx: Context<T>, private executor: (callbacks: Callback<T>[], node: WalkNode, enableExecutedCallbacks: boolean) => Rt) {
     }
 
     public static forSync<T extends CallbackFn>(ctx: Context<T>): _CallbackStacker<CallbackFn, void> {
@@ -45,11 +47,11 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
             : execCallbacksAsync)
     }
 
-    private _matchCallbacks(node: WalkNode, position: PositionType): _Callback<T>[] {
+    private _matchCallbacks(node: WalkNode, position: CallbackTiming): Callback<T>[] {
         let callbacks = this.ctx.callbacksByPosition[position];
 
         return (callbacks || [])
-            .map(cb => cb as _Callback<T>)
+            .map(cb => cb as Callback<T>)
             .filter(cb => filterByFilters(cb, node))
     }
 
@@ -60,18 +62,18 @@ export class _CallbackStacker<T extends CallbackFn, Rt> {
         }
     } = {}
 
-    public pushToStack(node: WalkNode, position: PositionType) {
+    public pushToStack(node: WalkNode, position: CallbackTiming) {
         const lastChild = node.children[node.children.length - 1];
         const callbacks = this._matchCallbacks(node, position)
         this.lookup[lastChild.id] = {
             trigger: node.id,
-            fn: () => this.executor(callbacks, node)
+            fn: () => this.executor(callbacks, node, this.ctx.config.trackExecutedCallbacks)
         }
     }
 
-    public executeOne(node: WalkNode, position: PositionType): Rt {
+    public executeOne(node: WalkNode, position: CallbackTiming): Rt {
         const callbacks = this._matchCallbacks(node, position)
-        return this.executor(callbacks, node)
+        return this.executor(callbacks, node, this.ctx.config.trackExecutedCallbacks)
     }
 
     public* execute(nodeId: number): Generator<Rt> {

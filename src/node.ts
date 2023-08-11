@@ -1,4 +1,4 @@
-import {_Callback, NodePathSegmentFormatter, NodeType} from "./types";
+import {Callback, NodePathSegmentFormatter, NodeType} from "./types";
 
 const getNormalizedType = (val: any): NodeType => {
     return Array.isArray(val)
@@ -23,7 +23,7 @@ export class WalkNode {
         public isArrayMember: boolean = false,
         public nodeType: NodeType = 'value',
         public rawType: string = 'undefined',
-        public executedCallbacks: _Callback<any>[] = [],
+        public executedCallbacks: Callback<any>[] = [],
         public key?: string | number,
         public parent?: WalkNode,) {
         this.id = WalkNode._idx++;

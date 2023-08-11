@@ -11,7 +11,7 @@ describe("walkAsync", () => {
     it("works with undefined root", async () => {
         let count = 0;
         await walkAsync(undefined, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => typeof n.val === 'undefined',
                 callback: () => ++count
             }
@@ -23,7 +23,7 @@ describe("walkAsync", () => {
     it("works with NaN root", async () => {
         let count = 0;
         await walkAsync(NaN, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => isNaN(n.val),
                 callback: () => ++count
             }
@@ -35,7 +35,7 @@ describe("walkAsync", () => {
     it("works with null root", async () => {
         let count = 0;
         await walkAsync(null, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.val === null,
                 callback: () => ++count
             }]
@@ -46,7 +46,7 @@ describe("walkAsync", () => {
     it("works with array root", async () => {
         let count = 0;
         await walkAsync([0], {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }]
         })
@@ -63,7 +63,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'name',
                 callback: async (n) => {
                     await timeout(10);
@@ -85,7 +85,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }]
         })
@@ -103,7 +103,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'object' ? 1 : 0
             }]
         })
@@ -121,7 +121,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'value' ? 1 : 0
             }]
         })
@@ -139,8 +139,8 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
-                positionFilter: 'both',
+            onVisit: [{
+                timing: 'both',
                 filters: n => n.key === 'name',
                 callback: (n) => count++
             }]
@@ -159,7 +159,7 @@ describe("walkAsync", () => {
 
         const result: string[] = [];
         await walkAsync(data, {
-            callbacks: [
+            onVisit: [
                 {
                     filters: n => n.key === 'name',
                     executionOrder: 1,
@@ -183,7 +183,7 @@ describe("walkAsync", () => {
         const data = {}
 
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     expect(n.key).toBeUndefined()
                     expect(n.val).toEqual({})
@@ -204,7 +204,7 @@ describe("walkAsync", () => {
         }
 
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'person',
                 callback: (n) => {
                     expect(n.key).toBe('person')
@@ -228,7 +228,7 @@ describe("walkAsync", () => {
         }
 
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'name',
                 callback: (n) => {
                     expect(n.key).toBe('name')
@@ -252,7 +252,7 @@ describe("walkAsync", () => {
         }
 
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'people',
                 callback: (n) => {
                     expect(n.key).toBe('people')
@@ -277,7 +277,7 @@ describe("walkAsync", () => {
         }
 
         await walkAsync(data, {
-            callbacks: [
+            onVisit: [
                 {
                     callback: (n: WalkNode) => {
                         if (!n.isArrayMember) return;
@@ -302,7 +302,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [
+            onVisit: [
                 {
                     executionOrder: 0,
                     callback: (n) => count += n.nodeType === 'value' ? 1 : 0
@@ -330,7 +330,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(a, {
             graphMode: "infinite",
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     count++;
                     if (count > 99)
@@ -351,7 +351,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(a, {
             graphMode: "graph",
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     count++;
                 }
@@ -370,7 +370,7 @@ describe("walkAsync", () => {
         try {
             await walkAsync(a, {
                 graphMode: "finiteTree",
-                callbacks: [{
+                onVisit: [{
                     callback: () => {
                     }
                 }]
@@ -393,13 +393,13 @@ describe("walkAsync", () => {
         const postKeys: string[] = []
         await walkAsync(data, {
             traversalMode: "depth",
-            callbacks: [
+            onVisit: [
                 {
-                    positionFilter: "preWalk",
+                    timing: "preVisit",
                     callback: (n) => preKeys.push(n.getPath())
                 },
                 {
-                    positionFilter: "postWalk",
+                    timing: "postVisit",
                     callback: (n) => postKeys.push(n.getPath())
                 }
             ]
@@ -432,11 +432,11 @@ describe("walkAsync", () => {
         const postKeys: string[] = []
         await walkAsync(data, {
             traversalMode: "breadth",
-            callbacks: [{
-                positionFilter: "preWalk",
+            onVisit: [{
+                timing: "preVisit",
                 callback: (n) => preKeys.push(n.getPath())
             }, {
-                positionFilter: "postWalk",
+                timing: "postVisit",
                 callback: (n) => postKeys.push(n.getPath())
             },
 
@@ -469,7 +469,7 @@ describe("walkAsync", () => {
 
         let count = 0;
         await walkAsync(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: (n) => n.val === 'Fido',
                 callback: () => count++
             }]
@@ -492,7 +492,7 @@ describe("walkAsync", () => {
         let count = 0;
         await walkAsync(data, {
             graphMode: 'finiteTree',
-            callbacks: [{callback: () => ++count}]
+            onVisit: [{callback: () => ++count}]
         })
 
         expect(count).toEqual(7)

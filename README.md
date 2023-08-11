@@ -24,8 +24,7 @@ Walk is a 0 dependency Javascript/Typescript library for traversing object trees
 
 - Functions for recursive processing of nested object trees and directed graphs
 - User defined callback hooks that get executed during the traversal
-- Support for asynchronous callbacks, run either in sequence or in parallel
-- Incremental graph traversal through generators, with full async support
+- Incremental graph traversal through generators
 - A variety of convenience functions, which double as implementation examples for the library
 
 # Installation
@@ -39,7 +38,7 @@ callback simply prints metadata about the node. We also add a global filter to e
 to `1`.
 
 ```typescript
-import { walk, apply } from 'walkjs';
+import { walk } from 'walkjs';
 
 const obj = {
     'a': 1,
@@ -48,10 +47,10 @@ const obj = {
 }
 
 walk(obj, {
-    callbacks: [{
+    onVisit: {
         callback: node => console.log("obj" + node.getPath(), "=", node.val),
         filters: node => node.val !== 1,
-    }]
+    }
 })
 ```
 
@@ -80,7 +79,7 @@ async function callApi(node: WalkNode): Promise<void> {
 }
 
 await walkAsync(exampleObject, {
-    callbacks: [{
+    onVisit: [{
         callback: callApi
     }]
 })
@@ -113,12 +112,14 @@ Throwing an instance of this class within a callback will halt processing comple
 ## Configuration:
 
 - `parallelizeAsyncCallbacks: boolean`: (Only applies to async variations). Ignore `executionOrder` and run all async callbacks in parallel. Callbacks will still be grouped by position, so this will only apply to callbacks in the same position group.
-- `callbacks: Callback<T>[]`: an array of callback objects. See the [Callback](#callbacks) section for more information.
+- `onVisit: OneOrMany<Callback<T>>`: an array of callback objects. See the [Callback](#callbacks) section for more information.
 - `traversalMode: 'depth'|'breadth'`: the mode for traversing the tree. Options are `depth` for *depth-first*
   processing and `breadth` for *breadth-first* processing.
 - `graphMode: 'finiteTree'|'graph'|'infinite'`: if the object that gets passed in doesn't comply with this configuration
   setting, an error will occur. Finite trees will error if an object/array reference is encountered more than once, determined by set membership of the WalkNode's `val`. Graphs will only process object/array references one time. Infinite trees will always process nodes -- use `throw new Break()` to end the processing manually. *Warning:
   infinite trees will never complete processing if a callback doesn't `throw new Break()`.*
+- `visitationRegister: NodeVisitationRegister`: As mentioned in the `graphMode` config option, walk uses a set membership on the node's `val` to determine whether a node has been visited (for arrays and objects only). This setting can be overridden to change that behavior.
+- `trackExecutedCallbacks: boolean`: set to `false` to prevent tracking which callbacks have been invoked on a node. `WalkNode.executedCallbacks` will always be empty if this is set to `false`. This may help with memory management for larger objects.
 
 ### Config Defaults
 
@@ -127,7 +128,8 @@ const defaultConfig = {
     traversalMode: 'depth',
     graphMode: 'finiteTree',
     parallelizeAsyncCallbacks: false,
-    callbacks: []
+    onVisit: [],
+    trackExecutedCallbacks: true
 }
 ```
 
@@ -150,13 +152,13 @@ const result = new WalkBuilder()
     .withSimpleCallback(logCallback)
     // configured callback
     .withCallback({
-        positionFilter: 'postWalk',
+        timing: 'postVisit',
         executionOrder: 0,
         callback: logCallback
     })
     // alternative way to configure callbacks
     .withConfiguredCallback(logCallback)
-        .filteredByPosition('postWalk')
+        .withTiming('postVisit')
         .withFilter(node => !!node.parent)
         .withExecutionOrder(1)
         .done()
@@ -173,7 +175,7 @@ Callbacks are a way to execute custom functionality on certain nodes within our 
 ```
 {   
     executionOrder: 0,
-    positionFilter: 'preWalk',
+    timing: 'preVisit',
     filters: node => node.nodeType === 'array',
     callback: function(node: NodeType){
         // do things here
@@ -184,13 +186,13 @@ Callbacks are a way to execute custom functionality on certain nodes within our 
 Here are the properties you can define in a callback configuration, most of which act as filters:
 
 - `callback: (node: WalkNode) => void`: the actual function to run. Your callback function will be passed a single argument: a `WalkNode` object (
-  see the Nodes section for more detail). succession. If unspecified, the callback will run `'preWalk'`. For async functions, `callback` may alternatively return a `Promise<void>`, in which case it will be awaited.
+  see the Nodes section for more detail). succession. If unspecified, the callback will run `'preVisit'`. For async functions, `callback` may alternatively return a `Promise<void>`, in which case it will be awaited.
 - `executionOrder: number`: an integer value for controlling order of callback operations. Lower values run earlier. If
   unspecified, the order will default to 0. Callback stacks are grouped by position and property, so the
   sort will only apply to callbacks in the same grouping.
 - `filters: (node: WalkNode) => boolean) | ((node: WalkNode) => boolean)[]`: A function or list of functions which will exclude nodes when the result of the function for that node is `false`.
-- `positionFilter: PositionType`: The position the traversal to run on -- think of this as when it should execute.
-  Options are `'preWalk'` (before any list/object is traversed), and `'postWalk'` (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the only difference here is whether the callback is invoked prior to yielding the node. However when running in `'depth'` mode, `'postWalk'` callbacks for a node will run *after all the callbacks of its children*. For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postWalk'` callbacks to run in the following order: `c`, `d`, `b`, `a`.
+- `timing: CallbackTiming`: When the callback will execute.
+  Options are `'preVisit'` (before any list/object is traversed), and `'postVisit'` (after any list/object is traversed). You may also supply `'both'`. When the walk is run in `'breadth'` mode, the only difference here is whether the callback is invoked prior to yielding the node. However when running in `'depth'` mode, `'postVisit'` callbacks for a node will run *after all the callbacks of its children*. For example, if our object is `{ a: b: { c: 1, d: 2 } }`, we would expect `'postVisit'` callbacks to run in the following order: `c`, `d`, `b`, `a`.
  
 
 ## Nodes
@@ -223,12 +225,12 @@ Walk has some extra utility functions built-in that you may find useful.
 ```typescript
 apply(
     target: any, 
-    ...callbacks: ((node: NodeType) => void)[]
+    ...onVisit: ((node: NodeType) => void)[]
 ): void
     
 applyAsync(
     target: any, 
-    ...callbacks: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
+    ...onVisit: (((node: NodeType) => void) | ((node: NodeType) => Promise<void>))[]
 ): Promise<void>
 ```
 
@@ -297,4 +299,4 @@ for await (const node of walkAsyncStep(obj, config))
 
 ```
 
-`preWalk` callbacks are invoked prior to yielding a node, and `postWalk` callbacks after.
+`preVisit` callbacks are invoked prior to yielding a node, and `postVisit` callbacks after.

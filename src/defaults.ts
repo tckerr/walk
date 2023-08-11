@@ -1,44 +1,49 @@
-import {_Callback, CallbackFn, Context, IOrderable, PartialConfig} from "./types";
+import {Callback, asMany, CallbackFn, Context, PartialConfig} from "./types";
 
-function executionOrderSort<T extends IOrderable>(a: T, b: T) {
+function executionOrderSort<T extends {executionOrder?: number}>(a: T, b: T) {
     const _a = a.executionOrder || 0;
     const _b = b.executionOrder || 0;
     return _a - _b;
 }
 
 function buildDefaultContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
+    const seenObjects = new Set<any>();
     return {
-        seenObjects: new Set<any>(),
+        seenObjects,
         callbacksByPosition: {
-            "preWalk": [],
-            "postWalk": []
+            preVisit: [],
+            postVisit: []
         },
         config: {
-            traversalMode: typeof config.traversalMode !== 'undefined' ? config.traversalMode : 'depth',
-            graphMode: typeof config.graphMode !== 'undefined' ? config.graphMode : 'finiteTree',
-            parallelizeAsyncCallbacks: typeof config.parallelizeAsyncCallbacks !== 'undefined' ? config.parallelizeAsyncCallbacks : false,
-            callbacks: typeof config.callbacks !== 'undefined' ? config.callbacks
-                .filter(cb => typeof cb.callback !== 'undefined')
+            trackExecutedCallbacks: true,
+            visitationRegister: config.visitationRegister ?? {
+                objectHasBeenSeen: n => seenObjects.has(n.val),
+                registerObjectVisit: n => seenObjects.add(n.val)
+            },
+            traversalMode: config.traversalMode ?? 'depth',
+            graphMode: config.graphMode ?? 'finiteTree',
+            parallelizeAsyncCallbacks: config.parallelizeAsyncCallbacks ?? false,
+            onVisit: asMany(config.onVisit ?? [])
+                ?.filter(cb => !!cb.callback)
                 .map(cb =>
                 ({
                     callback: cb.callback!,
-                    executionOrder: typeof cb.executionOrder === 'undefined' ? 0 : cb.executionOrder,
-                    filters: typeof cb.filters === 'undefined' ? [] : (Array.isArray(cb.filters) ? cb.filters : [cb.filters]),
-                    positionFilter: typeof cb.positionFilter === 'undefined' ? 'preWalk' : cb.positionFilter
-                })) : []
+                    executionOrder: cb.executionOrder ?? 0,
+                    filters: typeof cb.filters === 'undefined' ? [] : asMany(cb.filters),
+                    timing: cb.timing ?? 'preVisit'
+                })) ?? []
         },
     }
 }
 
 export function _buildContext<T extends CallbackFn>(config: PartialConfig<T>): Context<T> {
     const ctx = buildDefaultContext<T>(config)
-    ctx.config.callbacks.forEach((cb: _Callback<T>) => {
-        if (cb.positionFilter === "both") {
-            ctx.callbacksByPosition["preWalk"].push(cb)
-            ctx.callbacksByPosition["postWalk"].push(cb)
+    asMany(ctx.config.onVisit).forEach((cb: Callback<T>) => {
+        if (cb.timing === "both") {
+            ctx.callbacksByPosition.preVisit.push(cb)
+            ctx.callbacksByPosition.postVisit.push(cb)
         } else
-            ctx.callbacksByPosition[cb.positionFilter].push(cb)
-
+            ctx.callbacksByPosition[cb.timing].push(cb)
     })
 
     for (const key in ctx.callbacksByPosition)

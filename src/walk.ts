@@ -25,7 +25,7 @@ class NodeQueue {
 }
 
 class Walker<T extends CallbackFn> {
-    private depthFirst: boolean;
+    private readonly depthFirst: boolean;
 
     constructor(private ctx: Context<T>) {
         this.depthFirst = ctx.config.traversalMode === 'depth';
@@ -34,9 +34,9 @@ class Walker<T extends CallbackFn> {
     shouldSkipVisitation(node: WalkNode): boolean {
         if (!node.canBeCompared())
             return false;
-
-        if (!this.ctx.seenObjects.has(node.val))
-            this.ctx.seenObjects.add(node.val)
+        const {objectHasBeenSeen, registerObjectVisit} = this.ctx.config.visitationRegister;
+        if(!objectHasBeenSeen(node))
+            registerObjectVisit(node)
         else if (this.ctx.config.graphMode === 'graph')
             return true
         else if (this.ctx.config.graphMode === 'finiteTree')
@@ -59,14 +59,14 @@ class Walker<T extends CallbackFn> {
                 const children = node.children;
                 queue.add(children)
 
-                stacker.executeOne(node, 'preWalk');
+                stacker.executeOne(node, 'preVisit');
 
                 yield node;
 
                 if (this.depthFirst && children.length)
-                    stacker.pushToStack(node, 'postWalk')
+                    stacker.pushToStack(node, 'postVisit')
                 else {
-                    stacker.executeOne(node, 'postWalk');
+                    stacker.executeOne(node, 'postVisit');
                     for (let _ of stacker.execute(node.id)) {
                     }
                 }
@@ -91,14 +91,14 @@ class Walker<T extends CallbackFn> {
                 const children = node.children;
                 queue.add(children)
 
-                await stacker.executeOne(node, 'preWalk');
+                await stacker.executeOne(node, 'preVisit');
 
                 yield node;
 
                 if (this.depthFirst && children.length)
-                    stacker.pushToStack(node, 'postWalk')
+                    stacker.pushToStack(node, 'postVisit')
                 else {
-                    await stacker.executeOne(node, 'postWalk')
+                    await stacker.executeOne(node, 'postVisit')
                     for await (const _ of stacker.execute(node.id)){
                     }
                 }

@@ -28,9 +28,9 @@ describe('walkAsyncStep', () => {
         let preCount = 0;
         let postCount = 0;
         const config: PartialConfig<AsyncCallbackFn> = {
-            callbacks: [
+            onVisit: [
                 {
-                    positionFilter: "preWalk",
+                    timing: "preVisit",
                     filters: [n => n.val === 1],
                     callback: async () => {
                         await timeout(30)
@@ -38,7 +38,7 @@ describe('walkAsyncStep', () => {
                     }
                 },
                 {
-                    positionFilter: "postWalk",
+                    timing: "postVisit",
                     filters: [n => n.val === 1],
                     callback: async () => {
                         await timeout(100)

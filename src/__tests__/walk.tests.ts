@@ -11,7 +11,7 @@ describe("walk", () => {
         }
         const results: any[] = [];
         walk(obj, {
-            callbacks: [{
+            onVisit: [{
                 callback: node => results.push(["obj" + node.getPath(), "=", node.val]),
                 filters: node => node.val !== 1,
             }]
@@ -29,7 +29,7 @@ describe("walk", () => {
     it("works with undefined root", () => {
         let count = 0;
         walk(undefined, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => typeof n.val === 'undefined',
                 callback: () => ++count
             }
@@ -41,7 +41,7 @@ describe("walk", () => {
     it("works with NaN root", () => {
         let count = 0;
         walk(NaN, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => isNaN(n.val),
                 callback: () => ++count
             }
@@ -53,7 +53,7 @@ describe("walk", () => {
     it("works with null root", () => {
         let count = 0;
         walk(null, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.val === null,
                 callback: () => ++count
             }
@@ -65,10 +65,9 @@ describe("walk", () => {
     it("works with array root", () => {
         let count = 0;
         walk([0], {
-            callbacks: [{
+            onVisit: {
                 callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }
-            ]
         })
         expect(count).toEqual(1);
     });
@@ -78,7 +77,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{callback: (n) => count++, filters: n => !n.isRoot}]
+            onVisit: [{callback: (n) => count++, filters: n => !n.isRoot}]
         })
 
         expect(count).toEqual(0);
@@ -89,7 +88,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{callback: (n) => count++, filters: () => false}]
+            onVisit: [{callback: (n) => count++, filters: () => false}]
         })
 
         expect(count).toEqual(0);
@@ -104,7 +103,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'name',
                 callback: () => count++
             }]
@@ -123,7 +122,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'array' ? 1 : 0
             }]
         })
@@ -141,7 +140,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'object' ? 1 : 0
             }]
         })
@@ -159,7 +158,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => count += n.nodeType === 'value' ? 1 : 0
             }]
         })
@@ -177,8 +176,8 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
-                positionFilter: 'both',
+            onVisit: [{
+                timing: 'both',
                 filters: n => n.key === 'name',
                 callback: () => count++
             }]
@@ -197,7 +196,7 @@ describe("walk", () => {
 
         const result: string[] = [];
         walk(data, {
-            callbacks: [
+            onVisit: [
                 {
                     filters: n => n.key === 'name',
                     executionOrder: 1,
@@ -218,7 +217,7 @@ describe("walk", () => {
         const data = {}
 
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     expect(n.key).toBeUndefined()
                     expect(n.val).toEqual({})
@@ -239,7 +238,7 @@ describe("walk", () => {
         }
 
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'person',
                 callback: (n) => {
                     expect(n.key).toBe('person')
@@ -263,7 +262,7 @@ describe("walk", () => {
         }
 
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.key === 'name',
                 callback: (n) => {
                     expect(n.key).toBe('name')
@@ -287,7 +286,7 @@ describe("walk", () => {
         }
 
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: [n => n.key === 'people'],
                 callback: (n) => {
                     expect(n.key).toBe('people')
@@ -312,7 +311,7 @@ describe("walk", () => {
         }
 
         walk(data, {
-            callbacks: [
+            onVisit: [
                 {
                     callback: (n: WalkNode) => {
                         if (!n.isArrayMember) return;
@@ -337,7 +336,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [
+            onVisit: [
                 {
                     executionOrder: 0,
                     callback: (n) => count += n.nodeType === 'value' ? 1 : 0
@@ -365,7 +364,7 @@ describe("walk", () => {
         let count = 0;
         walk(a, {
             graphMode: "infinite",
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     count++;
                     if (count > 99)
@@ -386,7 +385,7 @@ describe("walk", () => {
         let count = 0;
         walk(a, {
             graphMode: "graph",
-            callbacks: [{
+            onVisit: [{
                 callback: (n) => {
                     count++;
                 }
@@ -404,7 +403,7 @@ describe("walk", () => {
 
         const run = () => walk(a, {
             graphMode: "finiteTree",
-            callbacks: [{
+            onVisit: [{
                 callback: () => {
                 }
             }]
@@ -424,13 +423,13 @@ describe("walk", () => {
         const postKeys: string[] = []
         walk(data, {
             traversalMode: "depth",
-            callbacks: [
+            onVisit: [
                 {
-                    positionFilter: "preWalk",
+                    timing: "preVisit",
                     callback: (n) => preKeys.push(n.getPath())
                 },
                 {
-                    positionFilter: "postWalk",
+                    timing: "postVisit",
                     callback: (n) => postKeys.push(n.getPath())
                 }
             ]
@@ -463,11 +462,11 @@ describe("walk", () => {
         const postKeys: string[] = []
         walk(data, {
             traversalMode: "breadth",
-            callbacks: [{
-                positionFilter: "preWalk",
+            onVisit: [{
+                timing: "preVisit",
                 callback: (n) => preKeys.push(n.getPath())
             }, {
-                positionFilter: "postWalk",
+                timing: "postVisit",
                 callback: (n) => postKeys.push(n.getPath())
             },
 
@@ -500,7 +499,7 @@ describe("walk", () => {
 
         let count = 0;
         walk(data, {
-            callbacks: [{
+            onVisit: [{
                 filters: n => n.val === 'Fido',
                 callback: () => count++
             }]
@@ -523,7 +522,7 @@ describe("walk", () => {
         let count = 0;
         walk(data, {
             graphMode: 'finiteTree',
-            callbacks: [{callback: () => ++count}]
+            onVisit: [{callback: () => ++count}]
         })
 
         expect(count).toEqual(7)

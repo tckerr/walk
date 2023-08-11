@@ -1,11 +1,13 @@
 import {
     Callback,
+    asMany,
     AsyncCallbackFn,
     CallbackFn,
-    GraphMode, NodeFilterFn,
-    NodeType,
+    GraphMode,
+    isMany,
+    NodeFilterFn,
     PartialConfig,
-    PositionType,
+    CallbackTiming,
     TraversalMode
 } from "./types";
 import {walk, walkAsync, walkAsyncStep, walkStep} from "./walk";
@@ -13,14 +15,15 @@ import {WalkNode} from "./node";
 
 
 class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> {
-    private readonly callback: Callback<T>;
+    private readonly callback: Partial<Callback<T>>;
 
     constructor(
         private cbs: T[],
         private source: TUpper
     ) {
         this.callback = {
-            callback: ((() => {}) as unknown as T)
+            callback: ((() => {
+            }) as unknown as T)
         }
     }
 
@@ -38,8 +41,8 @@ class CallbacksBuilder<T extends CallbackFn, TUpper extends BaseWalkBuilder<T>> 
         return this;
     }
 
-    filteredByPosition(position: PositionType): this {
-        this.callback.positionFilter = position;
+    withTiming(timing: CallbackTiming): this {
+        this.callback.timing = timing;
         return this;
     }
 
@@ -85,7 +88,7 @@ abstract class BaseWalkBuilder<T extends CallbackFn> {
         return this.withConfiguredCallbacks(callback)
     }
 
-    withCallback(callback: Callback<T>): this {
+    withCallback(callback: Partial<Callback<T>>): this {
         return this.withCallbacks(callback)
     }
 
@@ -94,23 +97,22 @@ abstract class BaseWalkBuilder<T extends CallbackFn> {
         return this;
     }
 
-    withCallbacks(...callbacks: Callback<T>[]): this {
-        if (!this._config.callbacks)
-            this._config.callbacks = []
-        this._config.callbacks.push(...callbacks)
+    withCallbacks(...callbacks: Partial<Callback<T>>[]): this {
+        if (!this._config.onVisit)
+            this._config.onVisit = []
+        if(!isMany(this._config.onVisit))
+            this._config.onVisit = [this._config.onVisit];
+        this._config.onVisit.push(...callbacks)
         return this;
     }
 
     getCurrentConfig(): PartialConfig<T> {
         return {
             ...this._config,
-            callbacks: this._config.callbacks?.map(cb => ({
+            onVisit: asMany(this._config.onVisit ?? []).map(cb => ({
                 ...cb,
                 filters: [
-                    ...(!cb.filters ? []
-                        : Array.isArray(cb.filters)
-                            ? cb.filters
-                            : [cb.filters]),
+                    ...(!cb.filters ? [] : asMany(cb.filters)),
                     ...this.globalFilters
                 ]
             }))

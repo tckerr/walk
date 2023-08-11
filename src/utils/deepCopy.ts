@@ -17,8 +17,8 @@ export function deepCopy(target: object, delimiter: string = '$walk:dc$') {
     const format: NodePathSegmentFormatter = ({key}) => delimiter + key;
 
     walk(target, {
-        callbacks: [{
-            positionFilter: 'preWalk',
+        onVisit: [{
+            timing: 'preVisit',
             filters: [n => !n.isRoot],
             callback: (node) => updateObjectViaPathString(
                 newObj,
