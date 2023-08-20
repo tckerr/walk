@@ -17,11 +17,11 @@ describe("walk", () => {
             }]
         })
         expect(results).toEqual([
-            [`obj`, '=', { a: 1, b: [ 2, 3 ], c: { d: 4 } },],
-            [`obj["b"]`, '=', [ 2, 3 ],],
+            [`obj`, '=', {a: 1, b: [2, 3], c: {d: 4}},],
+            [`obj["b"]`, '=', [2, 3],],
             [`obj["b"][0]`, '=', 2,],
             [`obj["b"][1]`, '=', 3,],
-            [`obj["c"]`, '=', { d: 4 },],
+            [`obj["c"]`, '=', {d: 4},],
             [`obj["c"]["d"]`, '=', 4,],
         ])
     });
@@ -413,9 +413,23 @@ describe("walk", () => {
     })
 
     it("executes in proper order when running depth first", () => {
-
         const data = {
-            people: ['Alice'],
+            people: [
+                {
+                    name: 'Alice',
+                    job: {
+                        title: 'Developer',
+                        salary: 100_000
+                    },
+                },
+                {
+                    name: 'Bob',
+                    job: {
+                        title: 'Product Manager',
+                        salary: 100_000
+                    },
+                }
+            ],
             pets: ['Fido'],
         }
 
@@ -435,26 +449,62 @@ describe("walk", () => {
             ]
         })
 
-        expect(preKeys).toEqual([
-            "",
-            "[\"people\"]",
-            "[\"people\"][0]",
-            "[\"pets\"]",
-            "[\"pets\"][0]",
-        ])
-        expect(postKeys).toEqual([
-            "[\"people\"][0]",
-            "[\"people\"]",
-            "[\"pets\"][0]",
-            "[\"pets\"]",
-            "",
-        ])
+        const preKeysExpected = [
+            ``,
+            `["people"]`,
+            `["people"][0]`,
+            `["people"][0]["name"]`,
+            `["people"][0]["job"]`,
+            `["people"][0]["job"]["title"]`,
+            `["people"][0]["job"]["salary"]`,
+            `["people"][1]`,
+            `["people"][1]["name"]`,
+            `["people"][1]["job"]`,
+            `["people"][1]["job"]["title"]`,
+            `["people"][1]["job"]["salary"]`,
+            `["pets"]`,
+            `["pets"][0]`,
+        ]
+
+        const postKeysExpected = [
+            `["people"][0]["name"]`,
+            `["people"][0]["job"]["title"]`,
+            `["people"][0]["job"]["salary"]`,
+            `["people"][0]["job"]`,
+            `["people"][0]`,
+            `["people"][1]["name"]`,
+            `["people"][1]["job"]["title"]`,
+            `["people"][1]["job"]["salary"]`,
+            `["people"][1]["job"]`,
+            `["people"][1]`,
+            `["people"]`,
+            `["pets"][0]`,
+            `["pets"]`,
+            ``,
+        ]
+
+        expect(preKeys).toEqual(preKeysExpected);
+        expect(postKeys).toEqual(postKeysExpected);
     })
 
     it("executes in proper order when running breadth first", () => {
-
         const data = {
-            people: ['Alice'],
+            people: [
+                {
+                    name: 'Alice',
+                    job: {
+                        title: 'Developer',
+                        salary: 100_000
+                    },
+                },
+                {
+                    name: 'Bob',
+                    job: {
+                        title: 'Product Manager',
+                        salary: 100_000
+                    },
+                }
+            ],
             pets: ['Fido'],
         }
 
@@ -473,21 +523,24 @@ describe("walk", () => {
             ]
         })
 
-        expect(preKeys).toEqual([
-            "",
-            "[\"people\"]",
-            "[\"pets\"]",
-            "[\"people\"][0]",
-            "[\"pets\"][0]",
-        ])
-
-        expect(postKeys).toEqual([
-            "",
-            "[\"people\"]",
-            "[\"pets\"]",
-            "[\"people\"][0]",
-            "[\"pets\"][0]",
-        ])
+        const keys = [
+            ``,
+            `["people"]`,
+            `["pets"]`,
+            `["people"][0]`,
+            `["people"][1]`,
+            `["pets"][0]`,
+            `["people"][0]["name"]`,
+            `["people"][0]["job"]`,
+            `["people"][1]["name"]`,
+            `["people"][1]["job"]`,
+            `["people"][0]["job"]["title"]`,
+            `["people"][0]["job"]["salary"]`,
+            `["people"][1]["job"]["title"]`,
+            `["people"][1]["job"]["salary"]`,
+        ];
+        expect(preKeys).toEqual(keys)
+        expect(postKeys).toEqual(keys)
     })
 
     it("only runs callbacks for filtered nodes", () => {
