@@ -1,6 +1,45 @@
 import {compare} from "../utils/compare";
 
 describe('compare', () => {
+    it('handles nulls', () => {
+        const cartA = {
+            fruit: null
+        };
+        const cartB = {
+            fruit: {
+                bananas: 1
+            }
+        }
+        const result = compare(cartA, cartB, true)
+        expect(result[1]).toEqual({
+            path: '.fruit',
+            hasDifference: true,
+            difference: {before: null, after: {bananas: 1}},
+            a: null,
+            b: {bananas: 1},
+        })
+    })
+
+    it('handles reverse nulls', () => {
+        const cartA = {
+            fruit: {
+                bananas: 1
+            }
+        }
+        const cartB = {
+            fruit: null
+        };
+        const result = compare(cartA, cartB, true)
+        expect(result[1]).toEqual({
+            path: '.fruit',
+            hasDifference: true,
+            difference: {before: {bananas: 1}, after: null},
+            a: {bananas: 1},
+            b: null,
+        })
+    })
+
+
     it("executes a correct comparison", () => {
         const cartA = {
             fruit: {

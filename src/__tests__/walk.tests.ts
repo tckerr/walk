@@ -580,4 +580,32 @@ describe("walk", () => {
 
         expect(count).toEqual(7)
     })
+
+    it("does not skip children when filtering out nodes", () => {
+
+        const visitedKeys: WalkNode['key'][] = [];
+
+        const data = {
+            basket: {
+                fruit: {
+                    apple: 1,
+                    banana: 2
+                }
+            }
+        }
+        function shouldBeSkipped(node: WalkNode): boolean {
+            // put your logic for identifying the node to skip here
+            return node.ancestors.some(a => a.key === 'basket')
+        }
+        walk(data, {
+            traversalMode: "depth",
+            onVisit: [
+                {
+                    filters: node => !shouldBeSkipped(node),
+                    callback: node => visitedKeys.push(node.key)
+                }
+            ]
+        })
+        expect(visitedKeys).toEqual([undefined, 'basket'])
+    })
 })
