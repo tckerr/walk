@@ -3,3 +3,5 @@ node_modules/
 .idea
 **/*.log
 src/profile.js
+/dist
+.DS_Store
